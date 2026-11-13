@@ -5,4 +5,10 @@
     <string name="loading_online_server">No local server found. Loading CoRide online…</string>
     <string name="server_offline">CoRide is offline.\nWe could not reach a local or hosted server.\nCheck your connection and try again.</string>
     <string name="retry_discovery">Try again</string>
+    <string name="app_version">v%1$s</string>
+    <string name="update_available">v%1$s · v%2$s available</string>
+    <string name="downloading_update">Downloading update…</string>
+    <string name="install_permission_required">Allow CoRide to install updates</string>
+    <string name="install_confirmation">Update downloaded. Confirm the Android installer.</string>
+    <string name="update_failed">Update could not be installed. It will be retried later.</string>
 </resources>

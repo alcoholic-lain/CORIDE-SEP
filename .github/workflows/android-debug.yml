@@ -32,6 +32,8 @@ jobs:
     outputs:
       version_name: ${{ steps.version.outputs.version_name }}
       tag_name: ${{ steps.version.outputs.tag_name }}
+      version_code: ${{ steps.version.outputs.version_code }}
+      signing_configured: ${{ steps.signing.outputs.configured }}
     env:
       MOBILE_SERVER_URL: ${{ inputs.server_url || vars.MOBILE_SERVER_URL }}
 
@@ -63,7 +65,7 @@ jobs:
 
           echo "version_name=$version" >> "$GITHUB_OUTPUT"
           echo "tag_name=v$version" >> "$GITHUB_OUTPUT"
-          echo "version_code=$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "version_code=$((GITHUB_RUN_NUMBER + 1000))" >> "$GITHUB_OUTPUT"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -76,11 +78,30 @@ jobs:
         with:
           packages: platform-tools platforms;android-36 build-tools;36.0.0
 
+      - name: Restore persistent Android signing key
+        id: signing
+        if: github.event_name != 'pull_request'
+        env:
+          ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+        shell: bash
+        run: |
+          if [[ -z "$ANDROID_DEBUG_KEYSTORE_BASE64" ]]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Set ANDROID_DEBUG_KEYSTORE_BASE64 to enable installable stable releases."
+            exit 0
+          fi
+
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/coride-debug.keystore"
+          chmod 600 "$RUNNER_TEMP/coride-debug.keystore"
+          echo "MOBILE_DEBUG_KEYSTORE=$RUNNER_TEMP/coride-debug.keystore" >> "$GITHUB_ENV"
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
       - name: Build debug APK
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon assembleDebug \
             "-PmobileServerUrl=$MOBILE_SERVER_URL" \
+            "-PmobileDebugKeystore=${MOBILE_DEBUG_KEYSTORE:-}" \
             "-PmobileVersionCode=${{ steps.version.outputs.version_code }}" \
             "-PmobileVersionName=${{ steps.version.outputs.version_name }}"
 
@@ -93,7 +114,10 @@ jobs:
           retention-days: 14
 
   publish-release:
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'push' && github.ref == 'refs/heads/mobile')
+    if: >-
+      (startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/mobile')) &&
+      needs.build.outputs.signing_configured == 'true'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -113,8 +137,8 @@ jobs:
           name: "CoRide Android ${{ needs.build.outputs.version_name }}"
           body: |
             Automated Android APK release.
-            Version code: ${{ github.run_number }}
-            APK is debug-signed and intended for sideloading/testing, not Play Store distribution.
+            Version code: ${{ needs.build.outputs.version_code }}
+            APK is signed with the repository's persistent update key and intended for sideloading/testing, not Play Store distribution.
           prerelease: false
           files: release/app-debug.apk
           fail_on_unmatched_files: true

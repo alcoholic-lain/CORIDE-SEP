@@ -55,9 +55,18 @@ val mobileVersionCode = providers.gradleProperty("mobileVersionCode")
     .toInt()
 val mobileVersionName = providers.gradleProperty("mobileVersionName")
     .getOrElse("0.1.0")
+val mobileDebugKeystore = providers.gradleProperty("mobileDebugKeystore")
+    .orElse(providers.environmentVariable("MOBILE_DEBUG_KEYSTORE"))
+    .getOrElse("")
+    .trim()
 
 require(mobileVersionCode > 0) {
     "mobileVersionCode must be a positive integer."
+}
+if (mobileDebugKeystore.isNotEmpty()) {
+    require(file(mobileDebugKeystore).isFile) {
+        "mobileDebugKeystore must point to an existing keystore file."
+    }
 }
 
 val prepareLoaderAsset = tasks.register<PrepareLoaderAsset>("prepareCorideLoaderAsset") {
@@ -76,6 +85,22 @@ android {
         versionCode = mobileVersionCode
         versionName = mobileVersionName
         buildConfigField("String", "SERVER_URL", "\"$escapedServerUrl\"")
+    }
+
+    if (mobileDebugKeystore.isNotEmpty()) {
+        signingConfigs {
+            create("persistentDebug") {
+                storeFile = file(mobileDebugKeystore)
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+        buildTypes {
+            getByName("debug") {
+                signingConfig = signingConfigs.getByName("persistentDebug")
+            }
+        }
     }
 
     buildFeatures {

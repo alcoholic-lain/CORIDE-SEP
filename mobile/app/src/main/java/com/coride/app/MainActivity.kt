@@ -1,15 +1,19 @@
 package com.coride.app
 
 import android.app.Activity
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
 import android.view.View
@@ -23,13 +27,18 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import java.net.Inet4Address
+import java.io.File
+import java.io.FileInputStream
+import java.io.IOException
 
 class MainActivity : Activity() {
     private lateinit var nsdManager: NsdManager
     private lateinit var loaderScreen: FrameLayout
     private lateinit var loaderWebView: WebView
     private lateinit var loadingStatus: TextView
+    private lateinit var versionLabel: TextView
     private lateinit var offlineScreen: LinearLayout
     private lateinit var retryButton: Button
     private lateinit var webView: WebView
@@ -42,6 +51,19 @@ class MainActivity : Activity() {
     private var fallbackAttempted = false
     private var loadingFallback = false
     private var currentServerHost: String? = null
+    private var updateCheckInProgress = false
+    private var updateDownloadInProgress = false
+    private var pendingUpdate: PendingUpdate? = null
+    private var rejectedUpdateVersion: String? = null
+    private val releaseUpdater by lazy { GitHubReleaseUpdater(applicationContext) }
+    private val updateCheckTask = object : Runnable {
+        override fun run() {
+            checkForUpdates()
+            mainHandler.postDelayed(this, UPDATE_CHECK_INTERVAL_MS)
+        }
+    }
+
+    private data class PendingUpdate(val apk: File, val versionName: String)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +77,30 @@ class MainActivity : Activity() {
             text = getString(R.string.searching_for_server)
             textSize = 16f
             setTextColor(getColor(R.color.app_secondary_text))
+        }
+        versionLabel = TextView(this).apply {
+            gravity = Gravity.CENTER
+            text = getString(R.string.app_version, BuildConfig.VERSION_NAME)
+            textSize = 12f
+            setTextColor(getColor(R.color.app_secondary_text))
+        }
+        val loadingFooter = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            addView(
+                loadingStatus,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+            addView(
+                versionLabel,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                ),
+            )
         }
         loaderWebView = WebView(this).apply {
             settings.javaScriptEnabled = false
@@ -79,13 +125,13 @@ class MainActivity : Activity() {
                 ),
             )
             addView(
-                loadingStatus,
+                loadingFooter,
                 FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL,
                 ).apply {
-                    bottomMargin = (48 * density).toInt()
+                    bottomMargin = (32 * density).toInt()
                 },
             )
         }
@@ -248,6 +294,8 @@ class MainActivity : Activity() {
         } else {
             startDiscovery()
         }
+        checkForUpdates()
+        mainHandler.postDelayed(updateCheckTask, UPDATE_CHECK_INTERVAL_MS)
     }
 
     @Suppress("DEPRECATION")
@@ -259,9 +307,19 @@ class MainActivity : Activity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        val update = pendingUpdate ?: return
+        if (canInstallPackages()) {
+            pendingUpdate = null
+            installUpdate(update)
+        }
+    }
+
     override fun onDestroy() {
         discoveryGeneration++
         stopDiscovery()
+        mainHandler.removeCallbacks(updateCheckTask)
         loaderWebView.destroy()
         webView.destroy()
         super.onDestroy()
@@ -478,9 +536,134 @@ class MainActivity : Activity() {
         offlineScreen.visibility = View.VISIBLE
     }
 
+    private fun checkForUpdates() {
+        if (
+            updateCheckInProgress ||
+            updateDownloadInProgress ||
+            pendingUpdate != null ||
+            isFinishing ||
+            isDestroyed
+        ) {
+            return
+        }
+        updateCheckInProgress = true
+        Thread({
+            try {
+                val update = releaseUpdater.findUpdate(BuildConfig.VERSION_NAME)
+                mainHandler.post {
+                    if (isDestroyed) return@post
+                    updateCheckInProgress = false
+                    if (update == null || update.versionName == rejectedUpdateVersion) return@post
+                    versionLabel.text = getString(
+                        R.string.update_available,
+                        BuildConfig.VERSION_NAME,
+                        update.versionName,
+                    )
+                    loadingStatus.text = getString(R.string.downloading_update)
+                    downloadUpdate(update)
+                }
+            } catch (error: IOException) {
+                Log.w(TAG, "Could not check GitHub for Android updates", error)
+                mainHandler.post {
+                    if (!isDestroyed) updateCheckInProgress = false
+                }
+            }
+        }, "CoRide-release-check").start()
+    }
+
+    private fun downloadUpdate(update: GitHubReleaseUpdater.AvailableUpdate) {
+        updateDownloadInProgress = true
+        Thread({
+            try {
+                val apk = releaseUpdater.downloadAndValidate(update, BuildConfig.VERSION_CODE)
+                mainHandler.post {
+                    if (isDestroyed) return@post
+                    updateDownloadInProgress = false
+                    requestUpdateInstallation(PendingUpdate(apk, update.versionName))
+                }
+            } catch (error: IOException) {
+                Log.e(TAG, "Could not download or validate the CoRide update", error)
+                mainHandler.post {
+                    if (isDestroyed) return@post
+                    updateDownloadInProgress = false
+                    rejectedUpdateVersion = update.versionName
+                    loadingStatus.text = getString(R.string.update_failed)
+                }
+            }
+        }, "CoRide-release-download").start()
+    }
+
+    private fun requestUpdateInstallation(update: PendingUpdate) {
+        pendingUpdate = update
+        if (!canInstallPackages()) {
+            loadingStatus.text = getString(R.string.install_permission_required)
+            try {
+                startActivity(
+                    Intent(
+                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:$packageName"),
+                    ),
+                )
+            } catch (error: android.content.ActivityNotFoundException) {
+                Log.e(TAG, "Android could not open app-install permission settings", error)
+                Toast.makeText(this, R.string.install_permission_required, Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+        pendingUpdate = null
+        installUpdate(update)
+    }
+
+    private fun canInstallPackages(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+            packageManager.canRequestPackageInstalls()
+    }
+
+    private fun installUpdate(update: PendingUpdate) {
+        try {
+            val installer = packageManager.packageInstaller
+            val parameters = android.content.pm.PackageInstaller.SessionParams(
+                android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL,
+            ).apply {
+                setAppPackageName(packageName)
+            }
+            val sessionId = installer.createSession(parameters)
+            installer.openSession(sessionId).use { session ->
+                FileInputStream(update.apk).use { input ->
+                    session.openWrite("base.apk", 0, update.apk.length()).use { output ->
+                        input.copyTo(output)
+                        session.fsync(output)
+                    }
+                }
+                val callbackIntent = Intent(this, UpdateInstallReceiver::class.java)
+                    .putExtra(UpdateInstallReceiver.EXTRA_VERSION, update.versionName)
+                val mutabilityFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    PendingIntent.FLAG_MUTABLE
+                } else {
+                    0
+                }
+                val callback = PendingIntent.getBroadcast(
+                    this,
+                    sessionId,
+                    callbackIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or mutabilityFlag,
+                )
+                session.commit(callback.intentSender)
+            }
+            loadingStatus.text = getString(R.string.install_confirmation)
+        } catch (error: IOException) {
+            Log.e(TAG, "Could not start Android package installation", error)
+            loadingStatus.text = getString(R.string.update_failed)
+        } catch (error: SecurityException) {
+            Log.e(TAG, "Android denied package installation", error)
+            loadingStatus.text = getString(R.string.update_failed)
+        }
+    }
+
     private companion object {
         const val SERVICE_TYPE = "_coride._tcp."
         const val DISCOVERY_TIMEOUT_MS = 15_000L
+        const val UPDATE_CHECK_INTERVAL_MS = 120_000L
         const val FALLBACK_URL = "https://coride-sep.vercel.app/"
         const val TAG = "CoRide"
     }

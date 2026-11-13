@@ -269,3 +269,9 @@ Branch: `module-2-vehicles`. One Trello card per task, one owner, pull request r
 - Uploaded files validated on the server, never only in the browser.
 - Works on mobile; uploads usable from a phone camera.
 - Trello card in *Done* and demonstrated at the sprint review.
+
+## Current scaffold preview
+
+This screenshot shows the current shared placeholder page, not the implemented vehicle-management features.
+
+![Current vehicles-module placeholder](screenshots/vehicles.png)

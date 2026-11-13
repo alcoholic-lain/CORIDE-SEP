@@ -269,3 +269,9 @@ Branch: `module-3-trips`. One Trello card per task, one owner.
 - No negative seat count possible under concurrent bookings.
 - Map and route features degrade gracefully when external services fail.
 - Trello card in *Done* and shown at the sprint review.
+
+## Current scaffold preview
+
+This screenshot shows the current shared placeholder page, not the implemented trip-management features.
+
+![Current trips-module placeholder](screenshots/trips.png)

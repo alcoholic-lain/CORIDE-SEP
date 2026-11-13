@@ -1,0 +1,21 @@
+# Reservations app status
+
+Updated: 2026-11-13
+
+## Current state
+
+- Django app is registered in `config/settings.py`.
+- `/reservations/` resolves to the app's `index` view.
+- The view delegates to the shared `CORIDE.module_page()` placeholder renderer.
+- No reservation model, seat management, booking flow, QR ticket, forms, or feature tests are implemented.
+- Requirements are documented in [04_reservation-management.md](04_reservation-management.md).
+
+## Changes so far
+
+- Scaffolded the app with Django's `startapp` command.
+- Added the app URL configuration and project route.
+- Replaced the generated empty view with a module-specific placeholder.
+
+## Screenshot
+
+![Current reservations-module placeholder](screenshots/reservations.png)

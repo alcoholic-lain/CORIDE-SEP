@@ -1,0 +1,21 @@
+# Vehicules app status
+
+Updated: 2026-11-13
+
+## Current state
+
+- Django app is registered in `config/settings.py`.
+- `/vehicles/` resolves to the app's `index` view.
+- The view delegates to the shared `CORIDE.module_page()` placeholder renderer.
+- No vehicle model, document uploads, verification workflow, forms, or feature tests are implemented.
+- Requirements are documented in [02_vehicle-management.md](02_vehicle-management.md).
+
+## Changes so far
+
+- Scaffolded the app with Django's `startapp` command.
+- Added the app URL configuration and project route.
+- Replaced the generated empty view with a module-specific placeholder.
+
+## Screenshot
+
+![Current vehicles-module placeholder](screenshots/vehicles.png)

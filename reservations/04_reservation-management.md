@@ -275,3 +275,9 @@ Branch: `module-4-reservations`. One Trello card per task, one owner.
 - Booking reachable in at most 3 clicks from the search results; works on mobile.
 - E-mail failures never break a reservation.
 - Trello card in *Done* and shown at the sprint review.
+
+## Current scaffold preview
+
+This screenshot shows the current shared placeholder page, not the implemented reservation features.
+
+![Current reservations-module placeholder](screenshots/reservations.png)

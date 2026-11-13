@@ -276,3 +276,9 @@ Each task becomes a **Trello card** with one owner. Branch: `module-1-users`, me
 - Works on mobile screen sizes (mobile first).
 - Passwords hashed, CSRF active, no secret in the repository.
 - Trello card moved to *Done* and shown at the sprint review.
+
+## Current scaffold preview
+
+This screenshot shows the current shared placeholder page, not the implemented user-management features.
+
+![Current users-module placeholder](screenshots/users.png)

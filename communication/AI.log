@@ -1,0 +1,21 @@
+# Communication app status
+
+Updated: 2026-11-13
+
+## Current state
+
+- Django app is registered in `config/settings.py`.
+- `/coms/` resolves to the app's `index` view.
+- The view delegates to the shared `CORIDE.module_page()` placeholder renderer.
+- No chat, review or rating models, real-time messaging, content filtering, or feature tests are implemented.
+- Requirements are documented in [05_communication-feedback.md](05_communication-feedback.md).
+
+## Changes so far
+
+- Scaffolded the app with Django's `startapp` command.
+- Added the app URL configuration and project route.
+- Replaced the generated empty view with a module-specific placeholder.
+
+## Screenshot
+
+![Current communication-module placeholder](screenshots/coms.png)

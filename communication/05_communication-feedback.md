@@ -257,3 +257,9 @@ Branch: `module-5-communication`. One Trello card per task, one owner.
 - Insulting text is never stored; false-positive tests included.
 - Chat and reviews usable on mobile.
 - Trello card in *Done* and shown at the sprint review.
+
+## Current scaffold preview
+
+This screenshot shows the current shared placeholder page, not the implemented communication and feedback features.
+
+![Current communication-module placeholder](screenshots/coms.png)

@@ -1,0 +1,22 @@
+# CORIDE app status
+
+Updated: 2026-11-13
+
+## Current state
+
+- Django app is registered in `config/settings.py`.
+- `/` renders the CoRide landing placeholder.
+- `views.py` provides a shared `module_page()` renderer used by all module placeholders.
+- `templates/coride/module.html` contains the shared responsive placeholder layout.
+- The shared kitty image is served from `assets/kitty.png` and is also used as the page favicon.
+- No business models, authentication flow, navigation, or production feature pages are implemented.
+
+## Changes so far
+
+- Scaffolded the app with Django's `startapp` command.
+- Added the home route and shared placeholder renderer.
+- Added screenshots of the currently rendered home page and module placeholders.
+
+## Screenshot
+
+![Current CoRide landing placeholder](screenshots/home.png)

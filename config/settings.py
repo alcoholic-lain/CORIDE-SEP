@@ -24,16 +24,29 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-0d3rfij#__@l$b(aygb3g6r5%(33h9oc0@8&xzu=6g3wr+jtky'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+def _get_debug(environ):
+    default = "false" if environ.get("VERCEL") else "true"
+    return environ.get("DJANGO_DEBUG", default).lower() == "true"
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.environ.get(
-        "DJANGO_ALLOWED_HOSTS",
-        "localhost,127.0.0.1",
-    ).split(",")
-    if host.strip()
-]
+
+def _get_allowed_hosts(environ):
+    hosts = [
+        host.strip()
+        for host in environ.get(
+            "DJANGO_ALLOWED_HOSTS",
+            "localhost,127.0.0.1",
+        ).split(",")
+        if host.strip()
+    ]
+    for name in ("VERCEL_URL", "VERCEL_PROJECT_PRODUCTION_URL"):
+        host = environ.get(name, "").strip()
+        if host and host not in hosts:
+            hosts.append(host)
+    return hosts
+
+
+DEBUG = _get_debug(os.environ)
+ALLOWED_HOSTS = _get_allowed_hosts(os.environ)
 
 
 # Application definition

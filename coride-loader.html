@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CoRide loader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f3ee; --ink:#1c1f26; --pink:#ff5a6e; --road:#f4f3ee;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#1c1f26; --ink:#f4f3ee; --road:#1c1f26;}
+}
+:root[data-theme="dark"]{--bg:#1c1f26; --ink:#f4f3ee; --road:#1c1f26;}
+html{height:100%; scroll-padding-top:env(safe-area-inset-top,0px);}
+body{margin:0; height:100%; display:grid; place-items:center; background:var(--bg);}
+svg{width:min(86vw,640px); height:auto; overflow:visible;}
+
+/* letters hop one after another, a wave that repeats every 2 s */
+.l{
+  font:800 215px Inter,system-ui,"Segoe UI",Arial,sans-serif;
+  text-anchor:middle;
+  transform-box:fill-box; transform-origin:50% 100%;
+  animation:hop 2s infinite;
+  animation-delay:calc(var(--i) * .1s - 2s);
+}
+@keyframes hop{
+  0%  {transform:translateY(0) scale(1,1);          animation-timing-function:ease-out}
+  6%  {transform:translateY(0) scale(1.06,.9);      animation-timing-function:cubic-bezier(.2,.7,.3,1)}
+  20% {transform:translateY(-26px) scale(.96,1.06); animation-timing-function:ease-in}
+  34% {transform:translateY(0) scale(1.07,.88);     animation-timing-function:ease-out}
+  44% {transform:translateY(0) scale(.99,1.03)}
+  52%,100%{transform:translateY(0) scale(1,1)}
+}
+/* dashed road line scrolls inside the C (4 dash periods = seamless loop) */
+.road{animation:road 2s linear infinite}
+@keyframes road{to{stroke-dashoffset:-52}}
+
+@media (prefers-reduced-motion:reduce){.l,.road{animation:none}}
+</style>
+</head>
+<body>
+<svg viewBox="-10 -40 800 230" role="img" aria-label="CoRide is loading">
+  <!-- the C road: pickup dot (top) to drop-off dot (bottom) -->
+  <path id="arc" d="M141.8 38 A70 70 0 1 0 141.8 142" fill="none"
+        stroke="var(--ink)" stroke-width="30" stroke-linecap="round"/>
+  <path class="road" d="M141.8 38 A70 70 0 1 0 141.8 142" fill="none"
+        stroke="var(--road)" stroke-opacity=".45" stroke-width="2" stroke-dasharray="7 6"/>
+
+  <!-- comet tail that follows the car -->
+  <path d="M141.8 38 A70 70 0 1 0 141.8 142" pathLength="100" fill="none"
+        stroke="var(--pink)" stroke-opacity=".6" stroke-width="14" stroke-linecap="round"
+        stroke-dasharray="14 200" stroke-dashoffset="14">
+    <animate attributeName="stroke-dashoffset" values="14;-86;-86" keyTimes="0;.8;1"
+             calcMode="spline" keySplines=".55 0 .35 1;0 0 1 1" dur="2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.04;.76;.84;1"
+             dur="2s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- pulse rings -->
+  <circle cx="141.8" cy="38" r="14" fill="none" stroke="var(--pink)" stroke-width="4" opacity="0">
+    <animate attributeName="r" values="14;38;38" keyTimes="0;.15;1" dur="2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values=".9;0;0" keyTimes="0;.15;1" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="141.8" cy="142" r="14" fill="none" stroke="var(--pink)" stroke-width="4" opacity="0">
+    <animate attributeName="r" values="14;14;14;38;38" keyTimes="0;.79;.8;.95;1" dur="2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0;0;.9;0;0" keyTimes="0;.79;.8;.95;1" dur="2s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- pickup and drop-off dots (drop-off pops on arrival) -->
+  <circle cx="141.8" cy="38" r="14" fill="var(--pink)"/>
+  <circle cx="141.8" cy="142" r="14" fill="var(--pink)">
+    <animate attributeName="r" values="14;14;19;14;14" keyTimes="0;.8;.85;.92;1" dur="2s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- the car -->
+  <circle r="11" fill="var(--pink)" stroke="var(--bg)" stroke-width="4" opacity="0">
+    <animateMotion dur="2s" repeatCount="indefinite" calcMode="spline"
+                   keyTimes="0;.8;1" keyPoints="0;1;1" keySplines=".55 0 .35 1;0 0 1 1">
+      <mpath href="#arc"/>
+    </animateMotion>
+    <animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.05;.78;.84;1"
+             dur="2s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- wordmark -->
+  <text class="l" style="--i:0" x="250" y="168" fill="var(--ink)">o</text>
+  <text class="l" style="--i:1" x="395" y="168" fill="var(--pink)">R</text>
+  <text class="l" style="--i:2" x="508" y="168" fill="var(--pink)">i</text>
+  <text class="l" style="--i:3" x="595" y="168" fill="var(--pink)">d</text>
+  <text class="l" style="--i:4" x="722" y="168" fill="var(--pink)">e</text>
+</svg>
+</body>
+</html>

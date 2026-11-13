@@ -1,7 +1,31 @@
 import java.net.URI
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 
 plugins {
     id("com.android.application")
+}
+
+abstract class PrepareLoaderAsset : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val loaderHtml: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun copyLoaderHtml() {
+        val destination = outputDirectory.file("coride-loader.html").get().asFile
+        destination.parentFile.mkdirs()
+        loaderHtml.get().asFile.copyTo(destination, overwrite = true)
+    }
 }
 
 val serverUrl = providers.gradleProperty("mobileServerUrl")
@@ -36,6 +60,11 @@ require(mobileVersionCode > 0) {
     "mobileVersionCode must be a positive integer."
 }
 
+val prepareLoaderAsset = tasks.register<PrepareLoaderAsset>("prepareCorideLoaderAsset") {
+    loaderHtml.set(rootProject.file("../coride-loader.html"))
+    outputDirectory.set(layout.buildDirectory.dir("generated/coride-loader-assets"))
+}
+
 android {
     namespace = "com.coride.app"
     compileSdk = 36
@@ -56,5 +85,14 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(
+            prepareLoaderAsset,
+            PrepareLoaderAsset::outputDirectory,
+        )
     }
 }

@@ -51,20 +51,7 @@ CoRide est une plateforme unique et sécurisée où :
 
 ---
 
-## État actuel du développement
-
-Les applications sont actuellement des squelettes avec des pages d'attente partagées. Les fonctionnalités décrites dans les spécifications restent à implémenter. Consultez le journal et l'aperçu de chaque application :
-
-| Application | Journal d'état et capture |
-|---|---|
-| CoRide | [AI.log](CORIDE/AI.log) · [Capture d'écran](CORIDE/screenshots/home.png) |
-| Utilisateurs | [AI.log](utilisateurs/AI.log) · [Spécification et capture](utilisateurs/01_user-management.md) |
-| Véhicules | [AI.log](vehicules/AI.log) · [Spécification et capture](vehicules/02_vehicle-management.md) |
-| Trajets | [AI.log](trajets/AI.log) · [Spécification et capture](trajets/03_trip-management.md) |
-| Réservations | [AI.log](reservations/AI.log) · [Spécification et capture](reservations/04_reservation-management.md) |
-| Communication | [AI.log](communication/AI.log) · [Spécification et capture](communication/05_communication-feedback.md) |
-
----
+Pour les guides développeur, l'état des applications et leurs spécifications, consultez [DEV.md](DEV.md).
 
 ## Intelligence artificielle
 

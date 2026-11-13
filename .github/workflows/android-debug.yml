@@ -1,0 +1,88 @@
+name: Android debug APK
+
+on:
+  push:
+    branches:
+      - mobile
+  pull_request:
+    branches:
+      - mobile
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server-not-configured:
+    if: vars.MOBILE_SERVER_URL == ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain why the APK was not built
+        run: echo "::notice title=Android APK not built::Set the repository Actions variable MOBILE_SERVER_URL to an HTTPS CoRide test-server origin to enable the APK build."
+
+  build:
+    if: vars.MOBILE_SERVER_URL != ''
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      MOBILE_SERVER_URL: ${{ vars.MOBILE_SERVER_URL }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Validate test server URL
+        run: |
+          node --input-type=module -e '
+            const value = process.env.MOBILE_SERVER_URL;
+            if (!value) throw new Error("Set the repository Actions variable MOBILE_SERVER_URL to an HTTPS CoRide test-server origin.");
+            const url = new URL(value);
+            if (url.protocol !== "https:" || url.pathname !== "/" || url.search || url.hash) {
+              throw new Error("MOBILE_SERVER_URL must be an HTTPS origin without a path, query, or fragment.");
+            }
+          '
+
+      - name: Install mobile dependencies
+        run: npm ci
+
+      - name: Generate Android project
+        run: npx cap add android
+
+      - name: Sync CoRide configuration
+        run: npm run sync:android
+
+      - name: Build debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: coride-android-debug
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14

@@ -32,7 +32,7 @@ Each module has its own URL prefix and URL configuration:
 | Communication | `/coms/` | `communication` |
 | Django admin | `/admin/` | Django admin |
 
-Add a module route to that app's `urls.py`; project-level prefixes are wired in `config/urls.py`. Views belong in the app's `views.py`. The `CORIDE` app currently supplies the shared landing-page template and kitty image used by the module placeholders.
+Add a module route to that app's `urls.py`; project-level prefixes are wired in `config/urls.py`. Views belong in the app's `views.py`. The `CORIDE` app currently supplies the shared landing-page template, and shared static assets such as the kitty image live in `assets/`.
 
 ## Module specifications
 

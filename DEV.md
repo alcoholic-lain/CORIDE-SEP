@@ -86,6 +86,10 @@ Then add its `AppConfig` to `INSTALLED_APPS` in `config/settings.py`, create `my
 
 The `mobile` folder is the native Kotlin Android Studio project. Open `mobile` directly in Android Studio. The APK is a WebView client; Django continues to run on the development computer, not on the phone.
 
+### Django static files on Vercel
+
+Shared assets such as `assets/kitty.png` are collected into `STATIC_ROOT` during Vercel's build and served from `STATIC_URL` by the Vercel CDN. Keep `STATIC_ROOT` configured in `config/settings.py`; Django templates should reference assets with the `{% static %}` template tag.
+
 ### Test on a phone over the same LAN
 
 1. Connect the phone and development computer to the same trusted Wi-Fi/LAN.
@@ -103,8 +107,9 @@ HTTP is unencrypted and enabled only in debug builds. Use it only on a trusted n
 ### Android CI/CD
 
 - Every push to `mobile`, pull request targeting `mobile`, and manual **Android debug APK** workflow run builds the Android project and uploads the `coride-android-debug` APK artifact.
+- Every successful push to `mobile` also publishes a GitHub prerelease with a unique `android-mobile-<run number>` tag and the APK attached.
 - Leave the optional `server_url` workflow input empty for LAN discovery. For a hosted HTTPS test server, set the `MOBILE_SERVER_URL` Actions variable or enter the origin as the workflow input; the app then opens that server directly.
-- Pushing a version tag such as `v0.1.0` builds the APK and publishes it as a GitHub prerelease. This workflow does not deploy Django or publish to the Play Store.
+- Pushing a version tag such as `v0.1.0` builds the APK and publishes it under that version tag. These prereleases are for testing, not Play Store releases. This workflow does not deploy Django.
 
 For local builds, install Android Studio and the Android SDK, open `mobile` as the project, and run the `app` configuration on a connected device. The optional `-PmobileServerUrl=<origin>` Gradle property or `MOBILE_SERVER_URL` environment variable bypasses LAN discovery for a hosted server.
 

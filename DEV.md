@@ -82,26 +82,32 @@ uv run manage.py startapp my_app
 
 Then add its `AppConfig` to `INSTALLED_APPS` in `config/settings.py`, create `my_app/urls.py`, and include it under a prefix in `config/urls.py`.
 
-## Android test package
+## Android testing and deployment
 
-The `mobile` branch contains a Capacitor Android wrapper. It loads the Django app from a separate HTTPS test-server origin; it does not bundle or run Django inside Android. The Android package is a debug APK for testing, not a Play Store release.
+The `mobile` branch contains a Capacitor Android wrapper. It loads Django from a server reachable by the phone; Django does not run inside the APK. The debug APK is for testing only, not Play Store distribution.
 
-Set the repository Actions variable `MOBILE_SERVER_URL` to the HTTPS origin of the deployed test server (for example, `https://coride-staging.example.com`). Use the origin only: do not include a path, query, or fragment. Until this variable is set, the workflow reports that the APK build was skipped. Once configured, `.github/workflows/android-debug.yml` builds on pushes and pull requests to `mobile` and uploads `coride-android-debug` as an artifact.
+### Test on a phone over the same LAN
 
-To build locally in PowerShell, use the same test-server URL and install Java 21 and the Android SDK first:
+1. Connect the phone and development computer to the same trusted Wi-Fi/LAN.
+2. Find the computer's LAN IPv4 address (for example, `192.168.1.20`).
+3. In PowerShell, allow Django to accept that host and listen on the network:
 
-```powershell
-cd mobile
-$env:MOBILE_SERVER_URL = "https://coride-staging.example.com"
-npm ci
-npx cap add android
-npm run sync:android
-Push-Location android
-.\gradlew.bat assembleDebug
-Pop-Location
-```
+   ```powershell
+   $env:DJANGO_ALLOWED_HOSTS = "localhost,127.0.0.1,192.168.1.20"
+   uv run manage.py runserver 0.0.0.0:8000
+   ```
 
-The APK is written to `mobile/android/app/build/outputs/apk/debug/app-debug.apk`. The generated `android/` directory is build output; the workflow creates it for each run.
+   Replace the example address with the computer's actual LAN IP. Allow inbound TCP port 8000 through the computer's firewall on the trusted private network if prompted.
+4. Open **Actions → Android debug APK → Run workflow**, select `mobile`, and enter `http://192.168.1.20:8000` as `server_url`. The workflow configures Android cleartext traffic only for this HTTP test build.
+5. When the run finishes, download the `coride-android-debug` artifact, extract the APK, and install it on the phone. Allow installation from that download source if Android prompts.
+
+The manual build accepts an HTTP origin for local LAN testing. HTTP is unencrypted, so use it only on a trusted network and never send real credentials or sensitive data. The URL is compiled into that APK; changing the server address requires another build.
+
+### Publish a test release later
+
+For hosted testing, configure the repository Actions variable `MOBILE_SERVER_URL` with the HTTPS origin of a deployed CoRide test server (for example, `https://coride-staging.example.com`). Then push a version tag such as `v0.1.0` to trigger a build and publish a GitHub prerelease containing the APK. Manual workflow builds and branch builds also upload an APK artifact.
+
+Install Java 21 and the Android SDK to build locally. From `mobile/`, set `MOBILE_SERVER_URL` to the same HTTP(S) origin, run `npm ci`, `npx cap add android`, `npm run configure:android`, and `npm run sync:android`, then run `.\gradlew.bat assembleDebug` from `mobile/android/`. The generated Android project is ignored by Git.
 
 ## Repository workflow
 

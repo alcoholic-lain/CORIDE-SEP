@@ -4,10 +4,17 @@ on:
   push:
     branches:
       - mobile
+    tags:
+      - "v*"
   pull_request:
     branches:
       - mobile
   workflow_dispatch:
+    inputs:
+      server_url:
+        description: "CoRide server origin (use your computer's LAN IP for local testing)"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -18,20 +25,20 @@ concurrency:
 
 jobs:
   server-not-configured:
-    if: vars.MOBILE_SERVER_URL == ''
+    if: vars.MOBILE_SERVER_URL == '' && github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Explain why the APK was not built
-        run: echo "::notice title=Android APK not built::Set the repository Actions variable MOBILE_SERVER_URL to an HTTPS CoRide test-server origin to enable the APK build."
+        run: echo "::notice title=Android APK not built::Set MOBILE_SERVER_URL to an HTTPS test-server origin, or run this workflow manually and enter an HTTP(S) server origin."
 
   build:
-    if: vars.MOBILE_SERVER_URL != ''
+    if: github.event_name == 'workflow_dispatch' || vars.MOBILE_SERVER_URL != ''
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: mobile
     env:
-      MOBILE_SERVER_URL: ${{ vars.MOBILE_SERVER_URL }}
+      MOBILE_SERVER_URL: ${{ inputs.server_url || vars.MOBILE_SERVER_URL }}
 
     steps:
       - name: Check out source
@@ -57,10 +64,10 @@ jobs:
         run: |
           node --input-type=module -e '
             const value = process.env.MOBILE_SERVER_URL;
-            if (!value) throw new Error("Set the repository Actions variable MOBILE_SERVER_URL to an HTTPS CoRide test-server origin.");
+            if (!value) throw new Error("Enter a CoRide test-server origin.");
             const url = new URL(value);
-            if (url.protocol !== "https:" || url.pathname !== "/" || url.search || url.hash) {
-              throw new Error("MOBILE_SERVER_URL must be an HTTPS origin without a path, query, or fragment.");
+            if (!["http:", "https:"].includes(url.protocol) || url.pathname !== "/" || url.search || url.hash) {
+              throw new Error("The server URL must be an HTTP(S) origin without a path, query, or fragment.");
             }
           '
 
@@ -69,6 +76,9 @@ jobs:
 
       - name: Generate Android project
         run: npx cap add android
+
+      - name: Configure LAN HTTP for local testing
+        run: npm run configure:android
 
       - name: Sync CoRide configuration
         run: npm run sync:android
@@ -86,3 +96,27 @@ jobs:
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+  publish-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download debug APK
+        uses: actions/download-artifact@v4
+        with:
+          name: coride-android-debug
+          path: release
+
+      - name: Publish prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          name: CoRide Android ${{ github.ref_name }}
+          body: |
+            Install the debug APK on an Android test device.
+            This prerelease is for testing only, not for Play Store distribution.
+          prerelease: true
+          files: release/app-debug.apk
+          fail_on_unmatched_files: true

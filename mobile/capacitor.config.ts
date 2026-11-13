@@ -3,18 +3,18 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const serverUrl = process.env.MOBILE_SERVER_URL;
 
 if (!serverUrl) {
-  throw new Error("Set MOBILE_SERVER_URL to the HTTPS origin of a CoRide test server.");
+  throw new Error("Set MOBILE_SERVER_URL to a CoRide server origin, such as http://192.168.1.10:8000.");
 }
 
 const parsedServerUrl = new URL(serverUrl);
 
 if (
-  parsedServerUrl.protocol !== "https:" ||
+  !["http:", "https:"].includes(parsedServerUrl.protocol) ||
   parsedServerUrl.pathname !== "/" ||
   parsedServerUrl.search ||
   parsedServerUrl.hash
 ) {
-  throw new Error("MOBILE_SERVER_URL must be an HTTPS origin without a path, query, or fragment.");
+  throw new Error("MOBILE_SERVER_URL must be an HTTP(S) origin without a path, query, or fragment.");
 }
 
 const config: CapacitorConfig = {
@@ -23,7 +23,6 @@ const config: CapacitorConfig = {
   webDir: "www",
   server: {
     url: parsedServerUrl.origin,
-    cleartext: false,
   },
 };
 

@@ -4,6 +4,7 @@
   "private": true,
   "description": "Android test wrapper for the CoRide Django application",
   "scripts": {
+    "configure:android": "node scripts/configure-android.mjs",
     "sync:android": "cap sync android",
     "open:android": "cap open android"
   },

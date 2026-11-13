@@ -26,6 +26,15 @@ if (serverUrl.isNotEmpty()) {
 val escapedServerUrl = serverUrl
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
+val mobileVersionCode = providers.gradleProperty("mobileVersionCode")
+    .getOrElse("1")
+    .toInt()
+val mobileVersionName = providers.gradleProperty("mobileVersionName")
+    .getOrElse("0.1.0")
+
+require(mobileVersionCode > 0) {
+    "mobileVersionCode must be a positive integer."
+}
 
 android {
     namespace = "com.coride.app"
@@ -35,8 +44,8 @@ android {
         applicationId = "com.coride.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = mobileVersionCode
+        versionName = mobileVersionName
         buildConfigField("String", "SERVER_URL", "\"$escapedServerUrl\"")
     }
 

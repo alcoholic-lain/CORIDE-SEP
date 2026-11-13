@@ -29,12 +29,41 @@ jobs:
     defaults:
       run:
         working-directory: mobile
+    outputs:
+      version_name: ${{ steps.version.outputs.version_name }}
+      tag_name: ${{ steps.version.outputs.tag_name }}
     env:
       MOBILE_SERVER_URL: ${{ inputs.server_url || vars.MOBILE_SERVER_URL }}
 
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Android version
+        id: version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Version tag must use vMAJOR.MINOR.PATCH format." >&2
+              exit 1
+            fi
+          else
+            latest_tag="$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)"
+            base_version="${latest_tag#v}"
+            if [[ -z "$latest_tag" ]]; then
+              base_version="0.1.0"
+            fi
+            IFS='.' read -r major minor patch <<< "$base_version"
+            version="$major.$minor.$((patch + 1))"
+          fi
+
+          echo "version_name=$version" >> "$GITHUB_OUTPUT"
+          echo "tag_name=v$version" >> "$GITHUB_OUTPUT"
+          echo "version_code=$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -50,7 +79,10 @@ jobs:
       - name: Build debug APK
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug "-PmobileServerUrl=$MOBILE_SERVER_URL"
+          ./gradlew --no-daemon assembleDebug \
+            "-PmobileServerUrl=$MOBILE_SERVER_URL" \
+            "-PmobileVersionCode=${{ steps.version.outputs.version_code }}" \
+            "-PmobileVersionName=${{ steps.version.outputs.version_name }}"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
@@ -73,16 +105,16 @@ jobs:
           name: coride-android-debug
           path: release
 
-      - name: Publish prerelease
+      - name: Publish stable release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('android-mobile-{0}', github.run_number) }}
+          tag_name: ${{ needs.build.outputs.tag_name }}
           target_commitish: ${{ github.sha }}
-          name: "CoRide Android ${{ github.ref_name }} #${{ github.run_number }}"
+          name: "CoRide Android ${{ needs.build.outputs.version_name }}"
           body: |
-            Install the debug APK on an Android test device.
-            Push builds use a unique `android-mobile-*` tag. Version-tag builds keep their `v*` tag.
-            This prerelease is for testing only, not for Play Store distribution.
-          prerelease: true
+            Automated Android APK release.
+            Version code: ${{ github.run_number }}
+            APK is debug-signed and intended for sideloading/testing, not Play Store distribution.
+          prerelease: false
           files: release/app-debug.apk
           fail_on_unmatched_files: true

@@ -29,7 +29,7 @@ val escapedServerUrl = serverUrl
 
 android {
     namespace = "com.coride.app"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.coride.app"

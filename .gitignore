@@ -12,6 +12,5 @@ wheels/
 # Local Django database
 db.sqlite3
 
-# JavaScript dependencies and generated Android project
+# JavaScript dependencies
 node_modules/
-mobile/android/

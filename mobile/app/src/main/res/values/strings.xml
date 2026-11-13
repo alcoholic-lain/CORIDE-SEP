@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">CoRide</string>
+    <string name="searching_for_server">Looking for CoRide on this network…</string>
+    <string name="connecting_to_server">Connecting to CoRide…</string>
+    <string name="server_not_found">CoRide server not found. Connect to the same Wi-Fi and start the Django server.</string>
+    <string name="retry_discovery">Try again</string>
+    <string name="connection_failed">Could not load CoRide. Check that the server is running on this network.</string>
+</resources>

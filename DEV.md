@@ -13,7 +13,7 @@ uv sync
 Start the development server:
 
 ```powershell
-uv run python manage.py runserver
+uv run manage.py runserver
 ```
 
 Open `http://127.0.0.1:8000/`. Django reloads Python and template changes automatically while the server is running.
@@ -50,23 +50,23 @@ Run Django commands through `uv run` so they use the project's locked environmen
 
 ```powershell
 # Check settings, installed apps, and URL configuration
-uv run python manage.py check
+uv run manage.py check
 
 # Create migration files after changing models
-uv run python manage.py makemigrations
+uv run manage.py makemigrations
 
 # Apply migrations to the local database
-uv run python manage.py migrate
+uv run manage.py migrate
 
 # Run tests for all apps, or one app
-uv run python manage.py test
-uv run python manage.py test trajets
+uv run manage.py test
+uv run manage.py test trajets
 
 # Open the Django interactive shell
-uv run python manage.py shell
+uv run manage.py shell
 
 # Create an admin login
-uv run python manage.py createsuperuser
+uv run manage.py createsuperuser
 ```
 
 Commit migration files along with the model changes that generated them. Do not edit an already shared migration; create a new migration instead.
@@ -74,7 +74,7 @@ Commit migration files along with the model changes that generated them. Do not 
 To scaffold another app:
 
 ```powershell
-uv run python manage.py startapp my_app
+uv run manage.py startapp my_app
 ```
 
 Then add its `AppConfig` to `INSTALLED_APPS` in `config/settings.py`, create `my_app/urls.py`, and include it under a prefix in `config/urls.py`.
@@ -95,8 +95,8 @@ git switch trajets
 git pull
 
 # After making and checking changes
-uv run python manage.py check
-uv run python manage.py test trajets
+uv run manage.py check
+uv run manage.py test trajets
 git add trajets/
 git commit -m "Describe the change"
 git push

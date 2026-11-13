@@ -1,0 +1,73 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} | CoRide</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: system-ui, sans-serif;
+            color: #172f46;
+            background: #f2f7f6;
+        }
+
+        body {
+            display: grid;
+            min-height: 100vh;
+            margin: 0;
+            place-items: center;
+        }
+
+        main {
+            width: min(90vw, 560px);
+            padding: 3rem 1.5rem;
+            text-align: center;
+        }
+
+        .mascot {
+            position: relative;
+            display: grid;
+            min-height: 270px;
+            place-items: center;
+        }
+
+        .mascot::before {
+            position: absolute;
+            z-index: 0;
+            color: rgb(23 47 70 / 8%);
+            content: "{{ title }}";
+            font-size: clamp(2.5rem, 11vw, 5rem);
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        img {
+            position: relative;
+            z-index: 1;
+            width: min(230px, 60vw);
+            height: auto;
+            image-rendering: pixelated;
+        }
+
+        h1 {
+            margin: 1.5rem 0 0.5rem;
+        }
+
+        p {
+            margin: 0;
+            color: #60778a;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="mascot">
+            <img src="{% static 'coride/kitty.png' %}" alt="Mascotte pixel art CoRide">
+        </div>
+        <h1>{{ title }}</h1>
+        <p>{{ hint }}</p>
+    </main>
+</body>
+</html>

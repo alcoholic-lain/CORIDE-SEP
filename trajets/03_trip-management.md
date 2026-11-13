@@ -4,6 +4,20 @@
 > **Depends on:** module 1 (`Driver`), module 2 (`Vehicle`) · **Used by:** module 4 (reservations), module 5 (reviews)
 > **Sprints:** S1 structure and CRUD → S2 search, map, business rules → S3 AI (fair price)
 
+## Team
+
+| Member | Own module | Role for this module |
+|---|---|---|
+| Alaaeddine Guouider | 01 · User management | Hand-off partner: shares an interface with this module (see section 6) |
+| Abdallah Salhi | 02 · Vehicle management | Hand-off partner: shares an interface with this module (see section 6) |
+| Wasim Snoussi | 03 · Trip management | **Module owner**: builds and presents this module |
+| Selim Aschi | 04 · Reservation management | Hand-off partner: shares an interface with this module (see section 6) |
+| Ahmed Ridha Lazhari | 05 · Communication & feedback | Hand-off partner: shares an interface with this module (see section 6) |
+| Our professor | — | Product Owner: sets the value of each story and accepts work at the sprint review |
+| Rotates each sprint | — | Scrum Master: facilitates, removes blockers, protects the sprint goal |
+
+---
+
 **Reading guide.** Rows marked **†** come from the official product backlog (slide 37). The other rows are derived from the module slides; their *Value* and *Complexity* are **proposed** and must be confirmed with the Product Owner. Priority = Value ÷ Complexity.
 
 ---

@@ -2,7 +2,6 @@ package com.coride.app
 
 import android.app.Activity
 import android.content.Context
-import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
 import android.net.nsd.NsdManager
@@ -55,7 +54,7 @@ class MainActivity : Activity() {
             setPadding(padding, padding, padding, padding)
             text = getString(R.string.searching_for_server)
             textSize = 16f
-            setTextColor(Color.rgb(96, 119, 138))
+            setTextColor(getColor(R.color.app_secondary_text))
         }
         loaderWebView = WebView(this).apply {
             settings.javaScriptEnabled = false
@@ -98,7 +97,7 @@ class MainActivity : Activity() {
             text = getString(R.string.app_name)
             textSize = 34f
             typeface = Typeface.create("sans-serif", Typeface.BOLD)
-            setTextColor(Color.rgb(23, 47, 70))
+            setTextColor(getColor(R.color.app_heading))
         }
         val offlineLogo = ImageView(this).apply {
             setImageResource(R.drawable.kitty)
@@ -110,13 +109,13 @@ class MainActivity : Activity() {
             setPadding(padding, padding, padding, padding)
             text = getString(R.string.server_offline)
             textSize = 16f
-            setTextColor(Color.rgb(96, 119, 138))
+            setTextColor(getColor(R.color.app_secondary_text))
         }
         offlineScreen = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(padding, padding, padding, padding)
-            setBackgroundColor(Color.rgb(242, 247, 246))
+            setBackgroundColor(getColor(R.color.app_surface))
             addView(
                 offlineLogo,
                 LinearLayout.LayoutParams(

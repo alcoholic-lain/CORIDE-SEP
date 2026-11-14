@@ -7,7 +7,14 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import CommunicationParticipant, Conversation, Message, Review
+from .models import (
+    CommunicationParticipant,
+    Conversation,
+    ConversationTypingStatus,
+    Message,
+    MessageReaction,
+    Review,
+)
 from .moderation import is_blocked
 from .services import mark_trip_completed, open_conversation
 
@@ -56,6 +63,50 @@ class ConversationTests(CommunicationTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Your chats")
+        self.assertContains(response, "driver")
+
+    def test_room_search_matches_titles_and_participants_without_leaking_rooms(self):
+        outsider_participant, _ = CommunicationParticipant.objects.get_or_create(
+            user=self.outsider,
+            defaults={"display_name": self.outsider.get_username()},
+        )
+        matching_conversation = Conversation.objects.create(
+            participant_one=self.passenger_participant,
+            participant_two=outsider_participant,
+            passenger=self.passenger,
+            driver=self.outsider,
+            title="Airport pickup",
+        )
+        private_conversation = Conversation.objects.create(
+            participant_one=self.driver_participant,
+            participant_two=outsider_participant,
+            passenger=self.driver,
+            driver=self.outsider,
+            title="Private airport plan",
+        )
+        self.client.force_login(self.passenger)
+
+        response = self.client.get(
+            reverse("communication:conversation_list"),
+            {"q": "airport"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Airport pickup")
+        self.assertNotContains(response, "Private airport plan")
+        self.assertEqual(
+            [conversation.pk for conversation in response.context["conversations"]],
+            [matching_conversation.pk],
+        )
+        self.assertNotIn(
+            private_conversation.pk,
+            [conversation.pk for conversation in response.context["conversations"]],
+        )
+
+        response = self.client.get(
+            reverse("communication:conversation_list"),
+            {"q": "driver"},
+        )
         self.assertContains(response, "driver")
 
     def test_open_conversation_is_idempotent_and_rejects_mismatched_reference(self):
@@ -138,6 +189,106 @@ class ConversationTests(CommunicationTestCase):
         message.refresh_from_db()
         self.assertIsNotNone(message.read_at)
 
+    def test_typing_status_is_visible_to_the_other_participant_and_can_be_cleared(self):
+        typing_url = reverse(
+            "communication:typing_status",
+            args=[self.conversation.pk],
+        )
+        self.client.force_login(self.passenger)
+
+        response = self.client.post(typing_url, {"is_typing": "sometimes"})
+        self.assertEqual(response.status_code, 400)
+        response = self.client.post(typing_url, {"is_typing": "true"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ConversationTypingStatus.objects.count(), 1)
+
+        self.client.force_login(self.driver)
+        response = self.client.get(
+            reverse("communication:poll_messages", args=[self.conversation.pk]),
+            {"after": 0},
+        )
+        self.assertEqual(
+            response.json()["typing"],
+            self.passenger_participant.display_label,
+        )
+
+        ConversationTypingStatus.objects.filter(
+            conversation=self.conversation,
+            participant=self.passenger_participant,
+        ).update(updated_at=timezone.now() - timedelta(seconds=10))
+        response = self.client.get(
+            reverse("communication:poll_messages", args=[self.conversation.pk]),
+            {"after": 0},
+        )
+        self.assertIsNone(response.json()["typing"])
+
+        self.client.force_login(self.outsider)
+        self.assertEqual(
+            self.client.post(typing_url, {"is_typing": "true"}).status_code,
+            403,
+        )
+
+        self.client.force_login(self.passenger)
+        self.client.post(typing_url, {"is_typing": "true"})
+        self.assertEqual(
+            self.client.post(typing_url, {"is_typing": "false"}).status_code,
+            200,
+        )
+        self.client.force_login(self.driver)
+        response = self.client.get(
+            reverse("communication:poll_messages", args=[self.conversation.pk]),
+            {"after": 0},
+        )
+        self.assertIsNone(response.json()["typing"])
+
+    def test_message_reactions_toggle_and_sync_through_polling(self):
+        message = Message.objects.create(
+            conversation=self.conversation,
+            sender=self.passenger,
+            sender_participant=self.passenger_participant,
+            content="Meet at the station",
+        )
+        reaction_url = reverse(
+            "communication:message_reaction",
+            args=[message.pk],
+        )
+        self.client.force_login(self.passenger)
+
+        self.client.force_login(self.outsider)
+        self.assertEqual(
+            self.client.post(reaction_url, {"emoji": "👍"}).status_code,
+            403,
+        )
+        self.client.force_login(self.passenger)
+        response = self.client.post(reaction_url, {"emoji": "invalid"})
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(MessageReaction.objects.exists())
+
+        response = self.client.post(reaction_url, {"emoji": "👍"})
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.json()["reactions"],
+            [{"emoji": "👍", "count": 1, "reacted": True}],
+        )
+
+        self.client.force_login(self.driver)
+        response = self.client.get(
+            reverse("communication:poll_messages", args=[self.conversation.pk]),
+            {"after": 0},
+        )
+        self.assertEqual(
+            response.json()["reactions"][str(message.pk)],
+            [{"emoji": "👍", "count": 1, "reacted": False}],
+        )
+
+        self.client.force_login(self.passenger)
+        response = self.client.post(reaction_url, {"emoji": "👍"})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["removed"])
+        self.assertEqual(response.json()["reactions"], [])
+        self.assertFalse(MessageReaction.objects.exists())
+
     def test_invalid_cursor_is_rejected(self):
         self.client.force_login(self.passenger)
         response = self.client.get(
@@ -173,6 +324,11 @@ class ConversationTests(CommunicationTestCase):
         )
         message = Message.objects.get()
         delete_url = reverse("communication:message_delete", args=[message.pk])
+        MessageReaction.objects.create(
+            message=message,
+            participant=self.passenger_participant,
+            emoji=MessageReaction.Emoji.LIKE,
+        )
 
         self.client.force_login(self.driver)
         self.assertEqual(self.client.post(delete_url).status_code, 403)
@@ -182,6 +338,7 @@ class ConversationTests(CommunicationTestCase):
         message.refresh_from_db()
         self.assertIsNotNone(message.deleted_at)
         self.assertEqual(message.content, "Please remove this")
+        self.assertFalse(message.reactions.exists())
 
     @override_settings(COMMUNICATION_BLOCKED_TERMS=("badword",))
     def test_moderation_normalizes_obfuscation_and_uses_whole_words(self):

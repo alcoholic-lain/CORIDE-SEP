@@ -218,6 +218,59 @@ class Message(models.Model):
             raise ValidationError(errors)
 
 
+class ConversationTypingStatus(models.Model):
+    conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE,
+        related_name="typing_statuses",
+    )
+    participant = models.ForeignKey(
+        CommunicationParticipant,
+        on_delete=models.CASCADE,
+        related_name="typing_statuses",
+    )
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["conversation", "participant"],
+                name="communication_unique_typing_status",
+            ),
+        ]
+
+
+class MessageReaction(models.Model):
+    class Emoji(models.TextChoices):
+        LIKE = "👍", "Like"
+        LOVE = "❤️", "Love"
+        LAUGH = "😂", "Laugh"
+        WOW = "😮", "Wow"
+        SAD = "😢", "Sad"
+        CELEBRATE = "🎉", "Celebrate"
+
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.CASCADE,
+        related_name="reactions",
+    )
+    participant = models.ForeignKey(
+        CommunicationParticipant,
+        on_delete=models.CASCADE,
+        related_name="message_reactions",
+    )
+    emoji = models.CharField(max_length=8, choices=Emoji.choices)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["message", "participant", "emoji"],
+                name="communication_unique_message_reaction",
+            ),
+        ]
+
+
 class Review(models.Model):
     conversation = models.ForeignKey(
         Conversation,

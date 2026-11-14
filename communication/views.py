@@ -1,4 +1,5 @@
 import csv
+from datetime import timedelta
 from urllib.parse import urlencode
 
 from django.contrib.auth import get_user_model
@@ -20,7 +21,14 @@ from .identity import (
     get_request_participant,
     guest_mode_enabled,
 )
-from .models import CommunicationParticipant, Conversation, Message, Review
+from .models import (
+    CommunicationParticipant,
+    Conversation,
+    ConversationTypingStatus,
+    Message,
+    MessageReaction,
+    Review,
+)
 from .services import create_message, delete_message
 
 
@@ -47,6 +55,27 @@ def _participant_or_redirect(request):
         return participant, None
     query = urlencode({"next": request.get_full_path()})
     return None, redirect(f"{reverse('communication:index')}?{query}")
+
+
+def _reaction_summaries(reactions, participant):
+    rows = (
+        reactions.values("message_id", "emoji")
+        .annotate(
+            count=Count("pk"),
+            mine=Count("pk", filter=Q(participant=participant)),
+        )
+        .order_by("message_id", "emoji")
+    )
+    summaries = {}
+    for row in rows:
+        summaries.setdefault(row["message_id"], []).append(
+            {
+                "emoji": row["emoji"],
+                "count": row["count"],
+                "reacted": bool(row["mine"]),
+            }
+        )
+    return summaries
 
 
 def index(request):
@@ -97,6 +126,7 @@ def conversation_list(request):
     if response:
         return response
 
+    query = request.GET.get("q", "").strip()[:120]
     conversations = (
         Conversation.objects.filter(
             Q(participant_one=participant) | Q(participant_two=participant)
@@ -107,15 +137,30 @@ def conversation_list(request):
                 "messages",
                 filter=Q(messages__read_at__isnull=True)
                 & ~Q(messages__sender_participant=participant),
+                distinct=True,
             )
         )
     )
+    if query:
+        conversations = conversations.filter(
+            Q(title__icontains=query)
+            | Q(participant_one__display_name__icontains=query)
+            | Q(participant_two__display_name__icontains=query)
+            | Q(participant_one__user__username__icontains=query)
+            | Q(participant_one__user__first_name__icontains=query)
+            | Q(participant_one__user__last_name__icontains=query)
+            | Q(participant_two__user__username__icontains=query)
+            | Q(participant_two__user__first_name__icontains=query)
+            | Q(participant_two__user__last_name__icontains=query)
+        )
+    conversations = conversations.distinct()
     return render(
         request,
         "communication/conversation_list.html",
         {
             "conversations": conversations,
             "participant": participant,
+            "search_query": query,
         },
     )
 
@@ -259,10 +304,20 @@ def conversation_detail(request, conversation_id):
         conversation=conversation,
         read_at__isnull=True,
     ).exclude(sender_participant=participant).update(read_at=timezone.now())
-    messages = conversation.messages.select_related(
-        "sender_participant",
-        "sender",
+    messages = list(
+        conversation.messages.select_related(
+            "sender_participant",
+            "sender",
+        )
     )
+    reaction_summaries = _reaction_summaries(
+        MessageReaction.objects.filter(
+            message_id__in=[message.pk for message in messages]
+        ),
+        participant,
+    )
+    for message in messages:
+        message.reaction_summaries = reaction_summaries.get(message.pk, [])
     message_form = MessageForm()
     if not conversation.is_open:
         message_form.fields["content"].disabled = True
@@ -291,6 +346,8 @@ def conversation_detail(request, conversation_id):
             "participant": participant,
             "other_participant": other_participant,
             "invite_url": invite_url,
+            "latest_message_id": messages[-1].pk if messages else 0,
+            "reaction_choices": MessageReaction.Emoji.choices,
         },
     )
 
@@ -336,14 +393,34 @@ def poll_messages(request, conversation_id):
         if conversation.participant_one_id == participant.pk
         else conversation.participant_one
     )
+    typing_status = (
+        ConversationTypingStatus.objects.filter(
+            conversation=conversation,
+            updated_at__gte=timezone.now() - timedelta(seconds=5),
+        )
+        .exclude(participant=participant)
+        .select_related("participant")
+        .first()
+    )
+    reactions = _reaction_summaries(
+        MessageReaction.objects.filter(message__conversation=conversation),
+        participant,
+    )
     return JsonResponse(
         {
             "is_open": conversation.is_open,
+            "typing": (
+                typing_status.participant.display_label if typing_status else None
+            ),
             "other_participant": (
                 other_participant.display_label if other_participant else None
             ),
             "has_second_participant": conversation.participant_two_id is not None,
             "read_ids": read_ids,
+            "reactions": {
+                str(message_id): summaries
+                for message_id, summaries in reactions.items()
+            },
             "messages": [
                 {
                     "id": message.pk,
@@ -361,11 +438,46 @@ def poll_messages(request, conversation_id):
                     if message.sender_participant_id == participant.pk
                     and not message.is_deleted
                     else None,
+                    "reaction_url": reverse(
+                        "communication:message_reaction",
+                        args=[message.pk],
+                    ),
                 }
                 for message in messages
             ],
         }
     )
+
+
+@require_POST
+def typing_status(request, conversation_id):
+    conversation, participant, response = _conversation_for_participant(
+        request,
+        conversation_id,
+    )
+    if response:
+        return response
+
+    is_typing = request.POST.get("is_typing")
+    if is_typing not in {"true", "false"}:
+        return JsonResponse({"error": "Invalid typing status."}, status=400)
+    if is_typing == "true":
+        if not conversation.is_open:
+            return JsonResponse(
+                {"error": "This conversation is closed."},
+                status=409,
+            )
+        ConversationTypingStatus.objects.update_or_create(
+            conversation=conversation,
+            participant=participant,
+            defaults={"updated_at": timezone.now()},
+        )
+    else:
+        ConversationTypingStatus.objects.filter(
+            conversation=conversation,
+            participant=participant,
+        ).delete()
+    return JsonResponse({"typing": is_typing == "true"})
 
 
 @require_POST
@@ -400,8 +512,64 @@ def send_message(request, conversation_id):
             "id": message.pk,
             "content": message.content,
             "sent_at": message.sent_at.isoformat(),
+            "sender": participant.display_label,
+            "is_mine": True,
+            "deleted": False,
+            "delete_url": reverse(
+                "communication:message_delete",
+                args=[message.pk],
+            ),
+            "reaction_url": reverse(
+                "communication:message_reaction",
+                args=[message.pk],
+            ),
         },
         status=201,
+    )
+
+
+@require_POST
+def message_reaction(request, message_id):
+    message = get_object_or_404(
+        Message.objects.select_related("conversation"),
+        pk=message_id,
+    )
+    conversation, participant, response = _conversation_for_participant(
+        request,
+        message.conversation_id,
+    )
+    if response:
+        return response
+    if message.is_deleted:
+        return JsonResponse(
+            {"error": "Deleted messages cannot be reacted to."},
+            status=409,
+        )
+
+    emoji = request.POST.get("emoji")
+    if emoji not in MessageReaction.Emoji.values:
+        return JsonResponse({"error": "Unsupported emoji reaction."}, status=400)
+
+    with transaction.atomic():
+        reaction, created = MessageReaction.objects.get_or_create(
+            message=message,
+            participant=participant,
+            emoji=emoji,
+        )
+        if not created:
+            reaction.delete()
+
+    reactions = _reaction_summaries(
+        MessageReaction.objects.filter(message=message),
+        participant,
+    ).get(message.pk, [])
+    return JsonResponse(
+        {
+            "message_id": message.pk,
+            "removed": not created,
+            "reactions": reactions,
+        },
+        status=201 if created else 200,
     )
 
 

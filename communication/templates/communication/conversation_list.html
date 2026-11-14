@@ -10,6 +10,23 @@
     </div>
     <a class="button" href="{% url 'communication:create_conversation' %}">New chat</a>
 </div>
+<form class="room-search" method="get" role="search">
+    <label for="room-search-input">Search chats</label>
+    <div class="room-search-controls">
+        <input
+            id="room-search-input"
+            type="search"
+            name="q"
+            value="{{ search_query }}"
+            maxlength="120"
+            placeholder="Search by chat name or participant"
+        >
+        <button class="button button-secondary" type="submit">Search</button>
+        {% if search_query %}
+            <a class="text-button" href="{% url 'communication:conversation_list' %}">Clear</a>
+        {% endif %}
+    </div>
+</form>
 {% if conversations %}
     <div class="card-list">
         {% for conversation in conversations %}
@@ -52,9 +69,15 @@
 {% else %}
     <section class="empty-state">
         <span class="empty-icon" aria-hidden="true">✦</span>
-        <h2>Your inbox is ready</h2>
-        <p>Create a private chat and invite someone with a secure share link. You can start messaging before they join.</p>
-        <a class="button" href="{% url 'communication:create_conversation' %}">Start a conversation</a>
+        {% if search_query %}
+            <h2>No chats found</h2>
+            <p>No chats match "{{ search_query }}". Try another name or chat title.</p>
+            <a class="button" href="{% url 'communication:conversation_list' %}">Clear search</a>
+        {% else %}
+            <h2>Your inbox is ready</h2>
+            <p>Create a private chat and invite someone with a secure share link. You can start messaging before they join.</p>
+            <a class="button" href="{% url 'communication:create_conversation' %}">Start a conversation</a>
+        {% endif %}
     </section>
 {% endif %}
 {% endblock %}

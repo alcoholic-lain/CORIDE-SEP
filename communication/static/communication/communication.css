@@ -270,6 +270,36 @@ p {
     gap: 0.8rem;
 }
 
+.room-search {
+    display: grid;
+    gap: 0.45rem;
+    max-width: 640px;
+    margin: 0 0 1.25rem;
+}
+
+.room-search label {
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.room-search-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.room-search input {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    min-height: 44px;
+    padding: 0.65rem 0.8rem;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid #d4d0cc;
+    border-radius: 0.7rem;
+}
+
 .conversation-card,
 .review-card {
     padding: 1rem 1.1rem;
@@ -419,6 +449,14 @@ p {
     font-size: 0.86rem;
 }
 
+.typing-indicator {
+    min-height: 1em;
+    margin: 0.25rem 0 0;
+    color: var(--coride);
+    font-size: 0.75rem;
+    font-weight: 650;
+}
+
 .back-link {
     display: inline-block;
     margin-bottom: 0.5rem;
@@ -514,6 +552,82 @@ p {
     overflow-wrap: anywhere;
 }
 
+.message-reaction-row,
+.message-reactions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.message-reaction-row {
+    margin-top: 0.45rem;
+}
+
+.reaction-chip,
+.react-menu summary {
+    min-height: 26px;
+    padding: 0.15rem 0.45rem;
+    color: var(--ink);
+    background: var(--page);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.78rem;
+}
+
+.reaction-mine {
+    background: var(--soft-pink);
+    border-color: var(--pink);
+}
+
+.react-menu {
+    position: relative;
+}
+
+.react-menu summary {
+    display: grid;
+    width: 26px;
+    place-items: center;
+    padding: 0;
+    font-size: 1rem;
+    list-style: none;
+}
+
+.react-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.react-options {
+    position: absolute;
+    z-index: 2;
+    bottom: calc(100% + 0.35rem);
+    left: 0;
+    display: flex;
+    gap: 0.2rem;
+    padding: 0.35rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.65rem;
+    box-shadow: var(--shadow);
+}
+
+.react-options button {
+    padding: 0.2rem;
+    background: transparent;
+    border: 0;
+    border-radius: 0.35rem;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.react-options button:hover,
+.react-options button:focus-visible,
+.reaction-chip:hover,
+.react-menu summary:hover {
+    border-color: var(--pink);
+}
+
 .empty-chat {
     display: grid;
     flex: 1;
@@ -567,6 +681,7 @@ p {
 .form-card textarea,
 .form-card select,
 .form-card input,
+.room-search input,
 .guest-start input {
     width: 100%;
     min-height: 46px;
@@ -694,6 +809,7 @@ p {
     .form-card textarea,
     .form-card select,
     .form-card input,
+    .room-search input,
     .guest-start input {
         color: var(--ink);
         background: #292e37;

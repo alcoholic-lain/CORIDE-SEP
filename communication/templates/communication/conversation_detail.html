@@ -31,6 +31,7 @@
                         </span>
                         {% if conversation.trip_reference %} · Trip {{ conversation.trip_reference }}{% endif %}
                     </p>
+                    <p id="typing-indicator" class="typing-indicator" aria-live="polite" hidden></p>
                 </div>
             </div>
         </div>
@@ -58,10 +59,14 @@
         class="message-list"
         aria-live="polite"
         data-poll-url="{% url 'communication:poll_messages' conversation.id %}"
-        data-next-id="{% with latest=chat_messages.last %}{{ latest.id|default:0 }}{% endwith %}"
+        data-next-id="{{ latest_message_id }}"
     >
         {% for message in chat_messages %}
-            <article class="message {% if message.sender_participant_id == participant.id %}message-mine{% endif %}" data-message-id="{{ message.id }}">
+            <article
+                class="message {% if message.sender_participant_id == participant.id %}message-mine{% endif %}"
+                data-message-id="{{ message.id }}"
+                data-reaction-url="{% url 'communication:message_reaction' message.id %}"
+            >
                 <div class="message-meta">
                     <strong>{{ message.sender_participant.display_label }}</strong>
                     <time datetime="{{ message.sent_at|date:'c' }}">{{ message.sent_at|date:"M j, H:i" }}</time>
@@ -72,6 +77,35 @@
                     {% endif %}
                 </div>
                 <p class="message-content">{% if message.is_deleted %}Message deleted{% else %}{{ message.content }}{% endif %}</p>
+                <div class="message-reaction-row" data-reactions-for="{{ message.id }}">
+                    <div class="message-reactions">
+                        {% for reaction in message.reaction_summaries %}
+                            <button
+                                class="reaction-chip{% if reaction.reacted %} reaction-mine{% endif %}"
+                                type="button"
+                                data-reaction-emoji="{{ reaction.emoji }}"
+                                aria-label="{{ reaction.count }} {{ reaction.emoji }} reactions"
+                            >
+                                {{ reaction.emoji }} <span>{{ reaction.count }}</span>
+                            </button>
+                        {% endfor %}
+                    </div>
+                    {% if not message.is_deleted %}
+                        <details class="react-menu">
+                            <summary aria-label="Add reaction" title="Add reaction">+</summary>
+                            <div class="react-options">
+                                {% for emoji, label in reaction_choices %}
+                                    <button
+                                        type="button"
+                                        data-reaction-emoji="{{ emoji }}"
+                                        title="{{ label }}"
+                                        aria-label="React with {{ label }}"
+                                    >{{ emoji }}</button>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    {% endif %}
+                </div>
                 {% if message.sender_participant_id == participant.id and not message.is_deleted %}
                     <button class="text-button delete-message" type="button" data-delete-url="{% url 'communication:message_delete' message.id %}">Delete</button>
                 {% endif %}
@@ -89,6 +123,7 @@
         id="send-form"
         class="send-form"
         data-send-url="{% url 'communication:send_message' conversation.id %}"
+        data-typing-url="{% url 'communication:typing_status' conversation.id %}"
         method="post"
     >
         {% csrf_token %}
@@ -103,15 +138,101 @@
     {% endif %}
 </section>
 
+<template id="reaction-controls-template">
+    <div class="message-reaction-row">
+        <div class="message-reactions"></div>
+        <details class="react-menu">
+            <summary aria-label="Add reaction" title="Add reaction">+</summary>
+            <div class="react-options">
+                {% for emoji, label in reaction_choices %}
+                    <button
+                        type="button"
+                        data-reaction-emoji="{{ emoji }}"
+                        title="{{ label }}"
+                        aria-label="React with {{ label }}"
+                    >{{ emoji }}</button>
+                {% endfor %}
+            </div>
+        </details>
+    </div>
+</template>
+
 <script>
 (() => {
     const list = document.getElementById("messages");
     const form = document.getElementById("send-form");
     const errorBox = document.getElementById("send-error");
     const status = document.getElementById("chat-status");
+    const typingIndicator = document.getElementById("typing-indicator");
     const input = form.elements.content;
     let lastId = Number(list.dataset.nextId) || 0;
     let polling = false;
+    let typingActive = false;
+    let typingTimer;
+    let lastTypingSentAt = 0;
+    let typingQueue = Promise.resolve();
+
+    function renderReactions(article, reactions) {
+        const container = article.querySelector(".message-reactions");
+        if (!container) return;
+        container.replaceChildren();
+
+        reactions.forEach((reaction) => {
+            const button = document.createElement("button");
+            button.className = `reaction-chip${reaction.reacted ? " reaction-mine" : ""}`;
+            button.type = "button";
+            button.dataset.reactionEmoji = reaction.emoji;
+            button.textContent = `${reaction.emoji} ${reaction.count}`;
+            button.setAttribute(
+                "aria-label",
+                `${reaction.count} ${reaction.emoji} reactions`
+            );
+            container.append(button);
+        });
+    }
+
+    function sendTypingStatus(isTyping) {
+        const body = new URLSearchParams({
+            is_typing: isTyping ? "true" : "false"
+        });
+        const token = form.elements.csrfmiddlewaretoken.value;
+        typingQueue = typingQueue.then(async () => {
+            const response = await fetch(form.dataset.typingUrl, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": token,
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Accept": "application/json"
+                },
+                body
+            });
+            if (!response.ok) throw new Error("Typing status update failed.");
+        }).catch(() => {
+            typingIndicator.hidden = false;
+            typingIndicator.textContent = "Typing status unavailable.";
+        });
+    }
+
+    function stopTyping() {
+        window.clearTimeout(typingTimer);
+        if (!typingActive) return;
+        typingActive = false;
+        sendTypingStatus(false);
+    }
+
+    function handleTypingInput() {
+        if (!input.value.trim()) {
+            stopTyping();
+            return;
+        }
+        if (!typingActive || Date.now() - lastTypingSentAt >= 2500) {
+            typingActive = true;
+            lastTypingSentAt = Date.now();
+            sendTypingStatus(true);
+        }
+        window.clearTimeout(typingTimer);
+        typingTimer = window.setTimeout(stopTyping, 3500);
+    }
 
     function appendMessage(message) {
         const wasAtBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 120;
@@ -121,6 +242,7 @@
         const article = document.createElement("article");
         article.className = `message${message.is_mine ? " message-mine" : ""}`;
         article.dataset.messageId = message.id;
+        article.dataset.reactionUrl = message.reaction_url;
 
         const meta = document.createElement("div");
         meta.className = "message-meta";
@@ -145,6 +267,12 @@
         content.className = "message-content";
         content.textContent = message.deleted ? "Message deleted" : message.content;
         article.append(meta, content);
+        if (!message.deleted) {
+            article.append(
+                document.getElementById("reaction-controls-template").content.cloneNode(true)
+            );
+            renderReactions(article, []);
+        }
 
         if (message.delete_url && !message.deleted) {
             const button = document.createElement("button");
@@ -170,6 +298,12 @@
             if (!response.ok) return;
             const data = await response.json();
             data.messages.forEach(appendMessage);
+            list.querySelectorAll(".message").forEach((article) => {
+                renderReactions(
+                    article,
+                    data.reactions[article.dataset.messageId] || []
+                );
+            });
             data.read_ids.forEach((id) => {
                 const readStatus = list.querySelector(`[data-read-status-for="${id}"]`);
                 if (readStatus) readStatus.textContent = "Seen";
@@ -178,6 +312,10 @@
             if (data.other_participant && otherName) {
                 otherName.textContent = data.other_participant;
             }
+            typingIndicator.hidden = !data.typing;
+            typingIndicator.textContent = data.typing
+                ? `${data.typing} is typing...`
+                : "";
             if (data.has_second_participant) {
                 const invitePanel = document.getElementById("invite-panel");
                 if (invitePanel) invitePanel.remove();
@@ -187,6 +325,7 @@
                 status.className = "status status-closed";
                 input.disabled = true;
                 form.querySelector("button[type=submit]").disabled = true;
+                stopTyping();
             }
             errorBox.textContent = "";
         } catch {
@@ -198,6 +337,7 @@
 
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        stopTyping();
         errorBox.textContent = "";
         const body = new FormData(form);
         try {
@@ -224,6 +364,37 @@
     });
 
     list.addEventListener("click", async (event) => {
+        const reactionButton = event.target.closest("[data-reaction-emoji]");
+        if (reactionButton) {
+            const article = reactionButton.closest(".message");
+            const body = new URLSearchParams({
+                emoji: reactionButton.dataset.reactionEmoji
+            });
+            const token = form.elements.csrfmiddlewaretoken.value;
+            try {
+                const response = await fetch(article.dataset.reactionUrl, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": token,
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Accept": "application/json"
+                    },
+                    body
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    errorBox.textContent = data.error || "Reaction could not be saved.";
+                    return;
+                }
+                renderReactions(article, data.reactions);
+                const menu = reactionButton.closest(".react-menu");
+                if (menu) menu.open = false;
+            } catch {
+                errorBox.textContent = "Reaction could not be saved. Please try again.";
+            }
+            return;
+        }
+
         const button = event.target.closest(".delete-message");
         if (!button) return;
         const token = form.elements.csrfmiddlewaretoken.value;
@@ -236,12 +407,19 @@
                 errorBox.textContent = "Message could not be deleted.";
                 return;
             }
-            button.closest(".message").querySelector(".message-content").textContent = "Message deleted";
+            const article = button.closest(".message");
+            article.querySelector(".message-content").textContent = "Message deleted";
+            renderReactions(article, []);
+            const menu = article.querySelector(".react-menu");
+            if (menu) menu.remove();
             button.remove();
         } catch {
             errorBox.textContent = "Message could not be deleted.";
         }
     });
+
+    input.addEventListener("input", handleTypingInput);
+    input.addEventListener("blur", stopTyping);
 
     const inviteButton = document.getElementById("copy-invite");
     if (inviteButton) {

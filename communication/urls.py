@@ -24,9 +24,19 @@ urlpatterns = [
         name="poll_messages",
     ),
     path(
+        "chat/<int:conversation_id>/typing/",
+        views.typing_status,
+        name="typing_status",
+    ),
+    path(
         "chat/<int:conversation_id>/send/",
         views.send_message,
         name="send_message",
+    ),
+    path(
+        "chat/messages/<int:message_id>/reaction/",
+        views.message_reaction,
+        name="message_reaction",
     ),
     path(
         "chat/messages/<int:message_id>/delete/",

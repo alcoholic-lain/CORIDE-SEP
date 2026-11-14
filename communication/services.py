@@ -97,10 +97,12 @@ def create_message(*, conversation, sender, content):
     return message
 
 
+@transaction.atomic
 def delete_message(*, message, sender):
     if message.sender_participant_id != sender.pk:
         raise PermissionDenied
     if message.deleted_at is None:
+        message.reactions.all().delete()
         message.deleted_at = timezone.now()
         message.save(update_fields=["deleted_at"])
     return message

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -40 800 230" role="img" aria-label="CoRide">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f3ee;
+      --ink: #1c1f26;
+      --pink: #ff5a6e;
+      --road: #f4f3ee;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #1c1f26;
+        --ink: #f4f3ee;
+        --road: #1c1f26;
+      }
+    }
+  </style>
+  <path d="M141.8 38 A70 70 0 1 0 141.8 142" fill="none" stroke="var(--ink)" stroke-width="30" stroke-linecap="round"/>
+  <path d="M141.8 38 A70 70 0 1 0 141.8 142" fill="none" stroke="var(--road)" stroke-opacity=".45" stroke-width="2" stroke-dasharray="7 6"/>
+  <circle cx="141.8" cy="38" r="14" fill="var(--pink)"/>
+  <circle cx="141.8" cy="142" r="14" fill="var(--pink)"/>
+  <text x="250" y="168" fill="var(--ink)" font-family="system-ui, sans-serif" font-size="215" font-weight="800" text-anchor="middle">o</text>
+  <text x="395" y="168" fill="var(--pink)" font-family="system-ui, sans-serif" font-size="215" font-weight="800" text-anchor="middle">R</text>
+  <text x="508" y="168" fill="var(--pink)" font-family="system-ui, sans-serif" font-size="215" font-weight="800" text-anchor="middle">i</text>
+  <text x="595" y="168" fill="var(--pink)" font-family="system-ui, sans-serif" font-size="215" font-weight="800" text-anchor="middle">d</text>
+  <text x="722" y="168" fill="var(--pink)" font-family="system-ui, sans-serif" font-size="215" font-weight="800" text-anchor="middle">e</text>
+</svg>

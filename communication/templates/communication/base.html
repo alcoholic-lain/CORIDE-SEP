@@ -12,12 +12,12 @@
         <a class="brand" href="{% url 'communication:index' %}">
             <iframe
                 class="brand-mark"
-                src="{% static 'communication/blackberry-animation.html' %}"
+                src="{% static 'communication/blackberry-logo.html' %}"
                 title="Blackberry logo"
                 aria-hidden="true"
                 tabindex="-1"
             ></iframe>
-            <span class="brand-byline">CoRide COMMUNICATION</span>
+            <img class="brand-coride" src="{% static 'communication/coride-logo.svg' %}" alt="CoRide">
         </a>
         <nav aria-label="Communication">
             <a href="{% url 'communication:conversation_list' %}">Chats</a>

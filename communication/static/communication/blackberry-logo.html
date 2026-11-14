@@ -19,48 +19,6 @@ html{height:100%; scroll-padding-top:env(safe-area-inset-top,0px);}
 body{margin:0; height:100%; display:grid; place-items:center; background:var(--bg);}
 svg{width:min(92vw,960px); height:auto; overflow:visible; shape-rendering:geometricPrecision;}
 
-/* berries pop in one by one, then pop out in the same order */
-.g{
-  transform-box:fill-box; transform-origin:center;
-  animation:pop 2s infinite backwards;
-  animation-delay:calc(var(--i) * .09s);
-  will-change:transform;
-}
-@keyframes pop{
-  0%    {transform:scale(0);    animation-timing-function:cubic-bezier(.2,.8,.3,1)}
-  9%    {transform:scale(1.22); animation-timing-function:ease-in-out}
-  14%   {transform:scale(.94);  animation-timing-function:ease-out}
-  18%,70%{transform:scale(1);   animation-timing-function:ease-in}
-  74%   {transform:scale(1.12); animation-timing-function:cubic-bezier(.5,0,.8,.4)}
-  84%,100%{transform:scale(0)}
-}
-/* leaf sways on its stem */
-.leaf{
-  transform-box:fill-box; transform-origin:0% 100%;
-  animation:sway 2s ease-in-out infinite;
-}
-@keyframes sway{
-  0%,100%{transform:rotate(0)}
-  25%{transform:rotate(-14deg)}
-  60%{transform:rotate(8deg)}
-  80%{transform:rotate(-4deg)}
-}
-/* each letter is its own vector shape and hops from its baseline, left to right */
-.s{
-  transform-origin:0 0;
-  animation:hop 2s infinite backwards;
-  animation-delay:calc(var(--i) * .07s + .4s);
-  will-change:transform;
-}
-@keyframes hop{
-  0%  {transform:translateY(0) scale(1,1);         animation-timing-function:ease-out}
-  5%  {transform:translateY(0) scale(1.05,.92);    animation-timing-function:cubic-bezier(.2,.7,.3,1)}
-  16% {transform:translateY(-9px) scale(.97,1.05); animation-timing-function:ease-in}
-  28% {transform:translateY(0) scale(1.05,.92);    animation-timing-function:ease-out}
-  36% {transform:translateY(0) scale(.99,1.02)}
-  42%,100%{transform:translateY(0) scale(1,1)}
-}
-@media (prefers-reduced-motion:reduce){.g,.leaf,.s{animation:none}}
 </style>
 </head>
 <body>

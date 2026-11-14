@@ -69,19 +69,19 @@ select {
 .brand-mark {
     display: block;
     flex: none;
-    width: 204px;
+    width: 184px;
     height: 50px;
     border: 0;
     pointer-events: none;
 }
 
-.brand-byline {
+.brand-coride {
+    display: block;
+    flex: none;
+    width: 144px;
+    height: auto;
     padding-left: 0.8rem;
     border-left: 1px solid #c9cfca;
-    color: var(--coride);
-    font-size: 0.66rem;
-    font-weight: 800;
-    letter-spacing: 0.13em;
 }
 
 .site-header nav,
@@ -757,17 +757,13 @@ p {
     }
 
     .brand-mark {
-        width: 132px;
+        width: 104px;
         height: 38px;
     }
 
-    .brand-byline {
+    .brand-coride {
+        width: 106px;
         padding-left: 0.5rem;
-        font-size: 0.78rem;
-    }
-
-    .brand-byline b {
-        font-size: 0.48rem;
     }
 
     .site-header nav {
@@ -851,13 +847,13 @@ p {
 
 @media (max-width: 430px) {
     .brand-mark {
-        width: 94px;
+        width: 82px;
         height: 32px;
     }
 
-    .brand-byline {
+    .brand-coride {
+        width: 92px;
         padding-left: 0.4rem;
-        font-size: 0.48rem;
     }
 
     .site-header nav {

@@ -3,11 +3,11 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Conversation, Message, Review
+from .models import CommunicationParticipant, Conversation, Message, Review
 from .moderation import is_blocked
 from .services import mark_trip_completed, open_conversation
 
@@ -34,17 +34,28 @@ class CommunicationTestCase(TestCase):
             driver=self.driver,
             departure_at=timezone.now() + timedelta(days=1),
         )
+        self.passenger_participant = CommunicationParticipant.objects.get(
+            user=self.passenger
+        )
+        self.driver_participant = CommunicationParticipant.objects.get(
+            user=self.driver
+        )
 
 
 class ConversationTests(CommunicationTestCase):
     def test_module_home_and_conversation_list_render(self):
         self.client.force_login(self.passenger)
 
-        self.assertEqual(self.client.get(reverse("communication:index")).status_code, 200)
+        response = self.client.get(reverse("communication:index"))
+        self.assertRedirects(
+            response,
+            reverse("communication:conversation_list"),
+            fetch_redirect_response=False,
+        )
         response = self.client.get(reverse("communication:conversation_list"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "My conversations")
+        self.assertContains(response, "Your chats")
         self.assertContains(response, "driver")
 
     def test_open_conversation_is_idempotent_and_rejects_mismatched_reference(self):
@@ -70,6 +81,7 @@ class ConversationTests(CommunicationTestCase):
         message = Message.objects.create(
             conversation=self.conversation,
             sender=self.passenger,
+            sender_participant=self.passenger_participant,
             content="Meet by the station",
         )
         self.client.force_login(self.driver)
@@ -185,6 +197,153 @@ class ConversationTests(CommunicationTestCase):
         self.assertFalse(Message.objects.exists())
 
 
+class GuestConversationTests(TestCase):
+    def setUp(self):
+        self.owner = Client()
+
+    def start_guest(self, client, name):
+        return client.post(
+            reverse("communication:index"),
+            {"display_name": name},
+        )
+
+    def test_guest_can_create_invite_chat_send_and_receive_messages(self):
+        response = self.start_guest(self.owner, "Alex")
+        self.assertRedirects(
+            response,
+            reverse("communication:conversation_list"),
+            fetch_redirect_response=False,
+        )
+        owner = CommunicationParticipant.objects.get(display_name="Alex")
+        self.assertTrue(owner.is_guest)
+        self.assertIsNone(owner.user_id)
+
+        response = self.owner.post(
+            reverse("communication:create_conversation"),
+            {
+                "title": "Campus pickup",
+                "initial_message": "Are you on your way?",
+            },
+        )
+        conversation = Conversation.objects.get(title="Campus pickup")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(conversation.participant_one, owner)
+        self.assertIsNone(conversation.participant_two)
+        opening_message = Message.objects.get(conversation=conversation)
+
+        response = self.owner.get(
+            reverse(
+                "communication:conversation_detail",
+                args=[conversation.pk],
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Are you on your way?")
+        self.assertContains(response, conversation.invite_code)
+
+        invited_client = Client()
+        join_url = reverse(
+            "communication:join_conversation",
+            args=[conversation.invite_code],
+        )
+        self.assertContains(invited_client.get(join_url), "Join as a guest")
+        response = invited_client.post(join_url, {"display_name": "Sam"})
+        self.assertRedirects(
+            response,
+            reverse(
+                "communication:conversation_detail",
+                args=[conversation.pk],
+            ),
+            fetch_redirect_response=False,
+        )
+        invited_client.get(
+            reverse(
+                "communication:conversation_detail",
+                args=[conversation.pk],
+            )
+        )
+        conversation.refresh_from_db()
+        invited_participant = conversation.participant_two
+        self.assertEqual(invited_participant.display_name, "Sam")
+        opening_message.refresh_from_db()
+        self.assertIsNotNone(opening_message.read_at)
+
+        response = invited_client.post(
+            reverse("communication:send_message", args=[conversation.pk]),
+            {"content": "On my way"},
+        )
+        self.assertEqual(response.status_code, 201)
+        response = self.owner.get(
+            reverse("communication:poll_messages", args=[conversation.pk]),
+            {"after": 1},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["messages"][0]["content"], "On my way")
+        self.assertFalse(response.json()["messages"][0]["is_mine"])
+        self.assertIn(opening_message.pk, response.json()["read_ids"])
+
+    def test_guest_sessions_are_isolated_and_invite_accepts_only_one_person(self):
+        self.start_guest(self.owner, "Owner")
+        self.owner.post(
+            reverse("communication:create_conversation"),
+            {"title": "Private ride"},
+        )
+        conversation = Conversation.objects.get(title="Private ride")
+        join_url = reverse(
+            "communication:join_conversation",
+            args=[conversation.invite_code],
+        )
+
+        invited_client = Client()
+        invited_client.post(join_url, {"display_name": "Invitee"})
+        outsider = Client()
+        self.start_guest(outsider, "Outsider")
+
+        response = outsider.get(
+            reverse(
+                "communication:conversation_detail",
+                args=[conversation.pk],
+            )
+        )
+        self.assertEqual(response.status_code, 403)
+
+        response = outsider.get(join_url)
+        self.assertContains(response, "already has two participants")
+
+    @override_settings(COMMUNICATION_GUEST_MODE=False)
+    def test_guest_mode_can_be_disabled(self):
+        response = self.owner.post(
+            reverse("communication:index"),
+            {"display_name": "No access"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Guest mode is turned off")
+        self.assertFalse(
+            CommunicationParticipant.objects.filter(
+                display_name="No access"
+            ).exists()
+        )
+
+    def test_disabling_guest_mode_revokes_existing_guest_access(self):
+        self.start_guest(self.owner, "Temporary guest")
+        self.owner.post(
+            reverse("communication:create_conversation"),
+            {"title": "Temporary chat"},
+        )
+        conversation = Conversation.objects.get(title="Temporary chat")
+
+        with override_settings(COMMUNICATION_GUEST_MODE=False):
+            response = self.owner.get(
+                reverse(
+                    "communication:conversation_detail",
+                    args=[conversation.pk],
+                )
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith(reverse("communication:index")))
+
+
 class ReviewTests(CommunicationTestCase):
     def setUp(self):
         super().setUp()
@@ -224,6 +383,8 @@ class ReviewTests(CommunicationTestCase):
             trip_reference=self.conversation.trip_reference,
             reviewer=self.passenger,
             target=self.driver,
+            reviewer_participant=self.passenger_participant,
+            target_participant=self.driver_participant,
             rating=4,
             comment="Existing review",
         )
@@ -254,6 +415,8 @@ class ReviewTests(CommunicationTestCase):
             trip_reference="1",
             reviewer=self.passenger,
             target=self.driver,
+            reviewer_participant=self.passenger_participant,
+            target_participant=self.driver_participant,
             rating=5,
         )
         second_conversation = open_conversation(
@@ -277,6 +440,10 @@ class ReviewTests(CommunicationTestCase):
             trip_reference="trip-2",
             reviewer=second_passenger,
             target=self.driver,
+            reviewer_participant=CommunicationParticipant.objects.get(
+                user=second_passenger
+            ),
+            target_participant=self.driver_participant,
             rating=4,
         )
 
@@ -289,6 +456,10 @@ class ReviewTests(CommunicationTestCase):
             trip_reference="trip-3",
             reviewer=third_passenger,
             target=self.driver,
+            reviewer_participant=CommunicationParticipant.objects.get(
+                user=third_passenger
+            ),
+            target_participant=self.driver_participant,
             rating=3,
         )
         response = self.client.get(url)
@@ -301,6 +472,8 @@ class ReviewTests(CommunicationTestCase):
             trip_reference=self.conversation.trip_reference,
             reviewer=self.passenger,
             target=self.driver,
+            reviewer_participant=self.passenger_participant,
+            target_participant=self.driver_participant,
             rating=4,
             comment="=1+1",
         )

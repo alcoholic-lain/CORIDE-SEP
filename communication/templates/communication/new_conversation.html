@@ -1,0 +1,23 @@
+{% extends "communication/base.html" %}
+
+{% block title %}New chat{% endblock %}
+
+{% block content %}
+<section class="form-card">
+    <a class="back-link" href="{% url 'communication:conversation_list' %}">← Back to chats</a>
+    <p class="eyebrow">START A PRIVATE CHAT</p>
+    <h1>Who do you want to message?</h1>
+    <p class="muted">Create a room, send the first message, then share the invite link with one person.</p>
+    <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
+        <label for="{{ form.title.id_for_label }}">Chat name</label>
+        {{ form.title }}
+        {{ form.title.errors }}
+        <label for="{{ form.initial_message.id_for_label }}">First message <span class="optional">(optional)</span></label>
+        {{ form.initial_message }}
+        {{ form.initial_message.errors }}
+        <button class="button" type="submit">Create chat</button>
+    </form>
+</section>
+{% endblock %}

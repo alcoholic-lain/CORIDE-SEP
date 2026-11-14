@@ -14,7 +14,7 @@
     {% for review in page %}
         <article class="review-card">
             <div class="review-heading">
-                <strong>{{ review.reviewer.get_username }} → {{ review.target.get_username }}</strong>
+                <strong>{{ review.reviewer_participant.display_label }} → {{ review.target_participant.display_label }}</strong>
                 <span class="rating-stars">★ {{ review.rating }}/5</span>
             </div>
             <p>{{ review.comment|default:"No comment." }}</p>

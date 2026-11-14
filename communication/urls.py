@@ -7,6 +7,12 @@ app_name = "communication"
 urlpatterns = [
     path("", views.index, name="index"),
     path("chat/", views.conversation_list, name="conversation_list"),
+    path("chat/new/", views.create_conversation, name="create_conversation"),
+    path(
+        "chat/join/<str:invite_code>/",
+        views.join_conversation,
+        name="join_conversation",
+    ),
     path(
         "chat/<int:conversation_id>/",
         views.conversation_detail,

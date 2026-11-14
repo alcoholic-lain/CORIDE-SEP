@@ -9,11 +9,27 @@
 </head>
 <body>
     <header class="site-header">
-        <a class="brand" href="{% url 'communication:index' %}">CoRide <span>Comms</span></a>
+        <a class="brand" href="{% url 'communication:index' %}">
+            <iframe
+                class="brand-mark"
+                src="{% static 'communication/blackberry-animation.html' %}"
+                title="Blackberry logo"
+                aria-hidden="true"
+                tabindex="-1"
+            ></iframe>
+            <span class="brand-byline">CoRide COMMUNICATION</span>
+        </a>
         <nav aria-label="Communication">
             <a href="{% url 'communication:conversation_list' %}">Chats</a>
             {% if user.is_authenticated %}
                 <a href="{% url 'communication:user_reviews' user.id %}">My reviews</a>
+            {% endif %}
+            {% if participant %}
+                <span class="identity-pill">
+                    {{ participant.display_label }}{% if participant.is_guest %} · guest{% endif %}
+                </span>
+            {% elif user.is_authenticated %}
+                <span class="identity-pill">{{ user.get_username }}</span>
             {% endif %}
         </nav>
     </header>

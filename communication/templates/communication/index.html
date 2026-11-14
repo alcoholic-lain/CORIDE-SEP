@@ -4,13 +4,27 @@
 
 {% block content %}
 <section class="hero">
-    <p class="eyebrow">CO-RIDE COMMUNITY</p>
-    <h1>Good trips start with good communication.</h1>
-    <p>Message the people on your accepted rides and leave a review after the trip.</p>
+    <p class="eyebrow">BLACKBERRY · BY CORIDE</p>
+    <h1>Every ride starts with a conversation.</h1>
+    <p>Start a private chat, share its invite link, and message in real time while you plan your ride.</p>
     {% if user.is_authenticated %}
         <a class="button" href="{% url 'communication:conversation_list' %}">Open my chats</a>
+    {% elif guest_mode_enabled %}
+        <form class="guest-start" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <label for="{{ name_form.display_name.id_for_label }}">Join as a guest</label>
+            {{ name_form.display_name }}
+            {{ name_form.display_name.errors }}
+            {% if name_form.non_field_errors %}<div class="form-error">{{ name_form.non_field_errors }}</div>{% endif %}
+            <button class="button" type="submit">Continue to chats</button>
+        </form>
+        <p class="muted">No account needed. Your guest name and chats stay in this browser session.</p>
     {% else %}
-        <p>Sign in to view your conversations and reviews.</p>
+        <div class="mode-notice">
+            <strong>Guest mode is turned off.</strong>
+            <p>Sign-in integration is not connected yet. Re-enable guest access with <code>CORIDE_COMMUNICATION_GUEST_MODE=true</code>.</p>
+        </div>
     {% endif %}
 </section>
 {% endblock %}

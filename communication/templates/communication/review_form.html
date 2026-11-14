@@ -5,7 +5,15 @@
 {% block content %}
 <section class="form-card">
     <p class="eyebrow">TRIP {{ trip_reference }}</p>
-    <h1>{% if editing %}Edit your review{% else %}Review {{ target.get_full_name|default:target.get_username }}{% endif %}</h1>
+    <h1>
+        {% if editing %}
+            Edit your review
+        {% elif target.get_username %}
+            Review {{ target.get_full_name|default:target.get_username }}
+        {% else %}
+            Review {{ target.display_label }}
+        {% endif %}
+    </h1>
     <form method="post">
         {% csrf_token %}
         {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}

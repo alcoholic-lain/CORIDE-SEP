@@ -2,7 +2,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Conversation, Message
+from .models import CommunicationParticipant, Conversation, Message
 from .moderation import is_blocked
 
 
@@ -21,12 +21,24 @@ def open_conversation(
 
     reservation_reference = str(reservation_reference)
     trip_reference = str(trip_reference)
+    passenger_participant, _ = CommunicationParticipant.objects.get_or_create(
+        user=passenger,
+        defaults={
+            "display_name": passenger.get_full_name() or passenger.get_username()
+        },
+    )
+    driver_participant, _ = CommunicationParticipant.objects.get_or_create(
+        user=driver,
+        defaults={"display_name": driver.get_full_name() or driver.get_username()},
+    )
     conversation, created = Conversation.objects.get_or_create(
         reservation_reference=reservation_reference,
         defaults={
             "trip_reference": trip_reference,
             "passenger": passenger,
             "driver": driver,
+            "participant_one": passenger_participant,
+            "participant_two": driver_participant,
             "departure_at": departure_at,
         },
     )
@@ -76,7 +88,8 @@ def create_message(*, conversation, sender, content):
 
     message = Message(
         conversation=conversation,
-        sender=sender,
+        sender=sender.user,
+        sender_participant=sender,
         content=content,
     )
     message.full_clean()
@@ -85,7 +98,7 @@ def create_message(*, conversation, sender, content):
 
 
 def delete_message(*, message, sender):
-    if message.sender_id != sender.pk:
+    if message.sender_participant_id != sender.pk:
         raise PermissionDenied
     if message.deleted_at is None:
         message.deleted_at = timezone.now()

@@ -1,4 +1,5 @@
 from datetime import timedelta
+import secrets
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -8,6 +9,53 @@ from django.db.models import F, Q
 from django.utils import timezone
 
 
+def create_invite_code():
+    return secrets.token_urlsafe(24)
+
+
+class CommunicationParticipant(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="communication_identity",
+    )
+    session_key = models.CharField(
+        max_length=40,
+        unique=True,
+        null=True,
+        blank=True,
+    )
+    display_name = models.CharField(max_length=80, blank=True, default="")
+    created_at = models.DateTimeField(default=timezone.now)
+    last_seen_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(user__isnull=False, session_key__isnull=True)
+                    | Q(user__isnull=True, session_key__isnull=False)
+                ),
+                name="communication_participant_one_identity",
+            ),
+        ]
+
+    def __str__(self):
+        return self.display_label
+
+    @property
+    def is_guest(self):
+        return self.user_id is None
+
+    @property
+    def display_label(self):
+        if self.user_id:
+            return self.user.get_full_name() or self.user.get_username()
+        return self.display_name or "Guest"
+
+
 class Conversation(models.Model):
     class CloseReason(models.TextChoices):
         CANCELLED = "CANCELLED", "Reservation cancelled"
@@ -15,19 +63,45 @@ class Conversation(models.Model):
         EXPIRED = "EXPIRED", "Conversation expired"
         MANUAL = "MANUAL", "Closed by staff"
 
-    reservation_reference = models.CharField(max_length=100, unique=True)
-    trip_reference = models.CharField(max_length=100, db_index=True)
+    reservation_reference = models.CharField(
+        max_length=100,
+        unique=True,
+        null=True,
+        blank=True,
+    )
+    trip_reference = models.CharField(max_length=100, db_index=True, blank=True, default="")
     passenger = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="passenger_conversations",
     )
     driver = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="driver_conversations",
     )
-    departure_at = models.DateTimeField()
+    participant_one = models.ForeignKey(
+        CommunicationParticipant,
+        on_delete=models.CASCADE,
+        related_name="conversations_as_first",
+    )
+    participant_two = models.ForeignKey(
+        CommunicationParticipant,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="conversations_as_second",
+    )
+    title = models.CharField(max_length=120, blank=True, default="")
+    invite_code = models.CharField(
+        max_length=40,
+        unique=True,
+    )
+    departure_at = models.DateTimeField(null=True, blank=True)
     opened_at = models.DateTimeField(default=timezone.now)
     closed_at = models.DateTimeField(null=True, blank=True)
     close_reason = models.CharField(
@@ -44,23 +118,38 @@ class Conversation(models.Model):
                 condition=~Q(passenger=F("driver")),
                 name="communication_conversation_distinct_participants",
             ),
+            models.CheckConstraint(
+                condition=Q(participant_two__isnull=True)
+                | ~Q(participant_one=F("participant_two")),
+                name="communication_room_distinct_participants",
+            ),
         ]
 
     def __str__(self):
-        return f"Conversation for reservation {self.reservation_reference}"
+        return self.title or f"Conversation {self.pk or ''}".strip()
+
+    def save(self, *args, **kwargs):
+        if not self.invite_code:
+            self.invite_code = create_invite_code()
+        super().save(*args, **kwargs)
 
     @property
     def is_open(self):
-        return (
-            self.closed_at is None
-            and timezone.now() < self.departure_at + timedelta(hours=24)
+        return self.closed_at is None and (
+            self.departure_at is None
+            or timezone.now() < self.departure_at + timedelta(hours=24)
         )
 
-    def includes(self, user):
-        return user.pk in (self.passenger_id, self.driver_id)
+    def includes(self, participant):
+        return participant.pk in (self.participant_one_id, self.participant_two_id)
 
     def clean(self):
         if self.passenger_id and self.passenger_id == self.driver_id:
+            raise ValidationError("A conversation must have two different participants.")
+        if (
+            self.participant_one_id
+            and self.participant_one_id == self.participant_two_id
+        ):
             raise ValidationError("A conversation must have two different participants.")
 
     def close(self, reason):
@@ -81,7 +170,14 @@ class Message(models.Model):
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="communication_messages",
+    )
+    sender_participant = models.ForeignKey(
+        CommunicationParticipant,
+        on_delete=models.CASCADE,
+        related_name="sent_messages",
     )
     content = models.TextField(max_length=1000)
     sent_at = models.DateTimeField(default=timezone.now, db_index=True)
@@ -110,8 +206,14 @@ class Message(models.Model):
             errors["content"] = "Message cannot be empty."
         elif len(self.content) > 1000:
             errors["content"] = "Message cannot exceed 1000 characters."
-        if self.conversation_id and self.sender_id and not self.conversation.includes(self.sender):
-            errors["sender"] = "Only conversation participants may send messages."
+        if (
+            self.conversation_id
+            and self.sender_participant_id
+            and not self.conversation.includes(self.sender_participant)
+        ):
+            errors["sender_participant"] = (
+                "Only conversation participants may send messages."
+            )
         if errors:
             raise ValidationError(errors)
 
@@ -126,12 +228,26 @@ class Review(models.Model):
     reviewer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="communication_reviews_written",
     )
     target = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="communication_reviews_received",
+    )
+    reviewer_participant = models.ForeignKey(
+        CommunicationParticipant,
+        on_delete=models.CASCADE,
+        related_name="reviews_written",
+    )
+    target_participant = models.ForeignKey(
+        CommunicationParticipant,
+        on_delete=models.CASCADE,
+        related_name="reviews_received",
     )
     rating = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)]
@@ -154,14 +270,28 @@ class Review(models.Model):
                 condition=Q(rating__gte=1) & Q(rating__lte=5),
                 name="communication_review_rating_range",
             ),
+            models.UniqueConstraint(
+                fields=["trip_reference", "reviewer_participant", "target_participant"],
+                name="communication_participant_review_unique",
+            ),
+            models.CheckConstraint(
+                condition=~Q(reviewer_participant=F("target_participant")),
+                name="communication_no_self_participant_review",
+            ),
         ]
 
     def __str__(self):
-        return f"{self.rating}/5 review by {self.reviewer_id} for {self.target_id}"
+        return (
+            f"{self.rating}/5 review by {self.reviewer_participant} "
+            f"for {self.target_participant}"
+        )
 
     def clean(self):
         errors = {}
-        if self.reviewer_id and self.target_id and self.reviewer_id == self.target_id:
+        if (
+            self.reviewer_participant_id
+            and self.reviewer_participant_id == self.target_participant_id
+        ):
             errors["target"] = "You cannot review yourself."
         if self.conversation_id:
             conversation = self.conversation
@@ -169,10 +299,10 @@ class Review(models.Model):
                 errors["trip_reference"] = "Review trip does not match the conversation."
             if not conversation.trip_completed_at:
                 errors["conversation"] = "Reviews are available after the trip is completed."
-            if self.reviewer_id and self.target_id and {
-                self.reviewer_id,
-                self.target_id,
-            } != {conversation.passenger_id, conversation.driver_id}:
+            if self.reviewer_participant_id and self.target_participant_id and {
+                self.reviewer_participant_id,
+                self.target_participant_id,
+            } != {conversation.participant_one_id, conversation.participant_two_id}:
                 errors["target"] = "Only trip participants may review each other."
         if self.comment and len(self.comment) > 500:
             errors["comment"] = "Comment cannot exceed 500 characters."

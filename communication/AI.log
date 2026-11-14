@@ -4,20 +4,24 @@ Updated: 2026-11-14
 
 ## Implemented
 
-- Private conversations and persistent messages using Django's configured user model.
-- `open_conversation()`, `close_conversation()` and `mark_trip_completed()` integration services.
-- Participant-only chat pages, one-second message polling, read receipts and sender-only soft deletion.
-- Twenty-four-hour chat expiry and the `close_conversations` management command.
-- Reviews limited to completed trips and their participants; one review per person per trip.
+- Session-based guest identities; no account or user-module changes are needed.
+- Guest users can create private two-person chats, share an invite link and send an opening message.
+- A second guest can join from the invite link; only the two participants can view or send messages.
+- HTTP polling, unread counts, visible read receipts and sender-only soft deletion.
+- Reservation conversations still use `open_conversation()`, `close_conversation()` and `mark_trip_completed()`.
+- Twenty-four-hour expiry for trip conversations and the `close_conversations` command.
+- Reviews limited to completed trips and their participants; one review per reviewer/target/trip.
 - Rating summaries hidden until three reviews, staff review moderation and CSV export.
 - Whole-word moderation with basic accent, repetition and character-substitution normalization.
-- Responsive communication pages and tests for permissions, messaging, reviews, moderation and exports.
+- Responsive Blackberry/CoRide branding and communication-specific tests.
 
-## Integration limits
+## Configuration and integration limits
 
-- The reservations and trips apps do not yet define models or call the communication services. Until they do, conversations must be created through `open_conversation()` and trips marked complete through `mark_trip_completed()`.
-- Django Channels and Redis are not configured. Chat uses HTTP polling once per second instead of WebSockets.
-- Configure `COMMUNICATION_BLOCKED_TERMS` in Django settings or the `CORIDE_BLOCKED_TERMS` environment variable. No moderation vocabulary is bundled, and an ML classifier is not implemented.
+- Guest access is enabled by default. Set Django's `COMMUNICATION_GUEST_MODE = False` or set `CORIDE_COMMUNICATION_GUEST_MODE=false` to require authenticated users. Existing guest sessions stop working while the flag is off.
+- Guest identities are tied to the Django browser session. They are temporary and are not automatically merged with accounts when the user module is integrated.
+- Reservations and trips still have no models or hooks in this branch. Reservation acceptance must call `open_conversation()` and trip completion must call `mark_trip_completed()`.
+- Django Channels and Redis are not configured. Chat uses one-second HTTP polling; delivery is not guaranteed under one second as it would be with WebSockets.
+- Configure `COMMUNICATION_BLOCKED_TERMS` in Django settings or `CORIDE_BLOCKED_TERMS` in the environment. No moderation vocabulary is bundled, and an ML classifier is not implemented.
 - Only CSV review export is available; PDF and Excel require additional dependencies.
 
 ## Checks

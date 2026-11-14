@@ -1,45 +1,87 @@
 {% extends "communication/base.html" %}
 
-{% block title %}Chat with {% if conversation.passenger_id == user.id %}{{ conversation.driver.get_username }}{% else %}{{ conversation.passenger.get_username }}{% endif %}{% endblock %}
+{% block title %}{{ conversation.title|default:"Chat" }}{% endblock %}
 
 {% block content %}
 <section class="chat-shell">
-    <div class="chat-heading">
-        <div>
-            <a class="back-link" href="{% url 'communication:conversation_list' %}">← All conversations</a>
-            <h1>
-                {% if conversation.passenger_id == user.id %}
-                    {{ conversation.driver.get_full_name|default:conversation.driver.get_username }}
-                {% else %}
-                    {{ conversation.passenger.get_full_name|default:conversation.passenger.get_username }}
-                {% endif %}
-            </h1>
-            <p>Trip {{ conversation.trip_reference }} · {{ conversation.departure_at|date:"M j, Y, H:i" }}</p>
+    <header class="chat-heading">
+        <div class="chat-title">
+            <a class="back-link" href="{% url 'communication:conversation_list' %}">← All chats</a>
+            <div class="chat-title-row">
+                <span class="avatar avatar-large" aria-hidden="true">
+                    {% if other_participant %}{{ other_participant.display_label|first|upper }}{% else %}✦{% endif %}
+                </span>
+                <div>
+                    <h1>
+                        {% if conversation.title %}
+                            {{ conversation.title }}
+                        {% elif other_participant %}
+                            {{ other_participant.display_label }}
+                        {% else %}
+                            New conversation
+                        {% endif %}
+                    </h1>
+                    <p>
+                        <span id="other-participant-name">
+                            {% if other_participant %}
+                                {{ other_participant.display_label }}
+                            {% else %}
+                                Waiting for someone to join
+                            {% endif %}
+                        </span>
+                        {% if conversation.trip_reference %} · Trip {{ conversation.trip_reference }}{% endif %}
+                    </p>
+                </div>
+            </div>
         </div>
         <span id="chat-status" class="status {% if conversation.is_open %}status-open{% else %}status-closed{% endif %}">
-            {% if conversation.is_open %}Open{% else %}Closed{% endif %}
+            {% if conversation.is_open %}Active{% else %}Closed{% endif %}
         </span>
-    </div>
+    </header>
+
+    {% if invite_url %}
+        <aside class="invite-panel" id="invite-panel">
+            <div>
+                <strong>Invite someone to this chat</strong>
+                <p>Only one person can join. Anyone with this private link can read and send messages.</p>
+            </div>
+            <div class="invite-copy">
+                <input id="invite-link" type="text" value="{{ invite_url }}" readonly aria-label="Private invite link">
+                <button class="button button-secondary" id="copy-invite" type="button">Copy link</button>
+            </div>
+            <p class="copy-status" id="copy-status" aria-live="polite"></p>
+        </aside>
+    {% endif %}
 
     <div
         id="messages"
         class="message-list"
+        aria-live="polite"
         data-poll-url="{% url 'communication:poll_messages' conversation.id %}"
         data-next-id="{% with latest=chat_messages.last %}{{ latest.id|default:0 }}{% endwith %}"
     >
         {% for message in chat_messages %}
-            <article class="message {% if message.sender_id == user.id %}message-mine{% endif %}" data-message-id="{{ message.id }}">
+            <article class="message {% if message.sender_participant_id == participant.id %}message-mine{% endif %}" data-message-id="{{ message.id }}">
                 <div class="message-meta">
-                    <strong>{{ message.sender.get_full_name|default:message.sender.get_username }}</strong>
-                    <time>{{ message.sent_at|date:"M j, H:i" }}</time>
+                    <strong>{{ message.sender_participant.display_label }}</strong>
+                    <time datetime="{{ message.sent_at|date:'c' }}">{{ message.sent_at|date:"M j, H:i" }}</time>
+                    {% if message.sender_participant_id == participant.id %}
+                        <span class="read-status" data-read-status-for="{{ message.id }}">
+                            {% if message.read_at %}Seen{% else %}Sent{% endif %}
+                        </span>
+                    {% endif %}
                 </div>
                 <p class="message-content">{% if message.is_deleted %}Message deleted{% else %}{{ message.content }}{% endif %}</p>
-                {% if message.sender_id == user.id and not message.is_deleted %}
+                {% if message.sender_participant_id == participant.id and not message.is_deleted %}
                     <button class="text-button delete-message" type="button" data-delete-url="{% url 'communication:message_delete' message.id %}">Delete</button>
                 {% endif %}
             </article>
         {% empty %}
-            <p id="empty-messages" class="empty-chat">No messages yet. Say hello.</p>
+            <div id="empty-messages" class="empty-chat">
+                <span class="empty-icon" aria-hidden="true">✦</span>
+                <strong>Say hello</strong>
+                <p>Your messages will appear here.</p>
+            </div>
         {% endfor %}
     </div>
 
@@ -51,10 +93,14 @@
     >
         {% csrf_token %}
         {{ message_form.content }}
-        <button class="button" type="submit" {% if not conversation.is_open %}disabled{% endif %}>Send</button>
+        <button class="button send-button" type="submit" {% if not conversation.is_open %}disabled{% endif %}>Send</button>
     </form>
     <p id="send-error" class="form-error" aria-live="polite"></p>
-    <p class="chat-footnote">Messages are private to the trip participants. Chat closes 24 hours after departure.</p>
+    {% if conversation.departure_at %}
+        <p class="chat-footnote">Private trip chat · closes 24 hours after departure.</p>
+    {% else %}
+        <p class="chat-footnote">Private chat · messages are visible only to the two participants.</p>
+    {% endif %}
 </section>
 
 <script>
@@ -68,6 +114,7 @@
     let polling = false;
 
     function appendMessage(message) {
+        const wasAtBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 120;
         const empty = document.getElementById("empty-messages");
         if (empty) empty.remove();
 
@@ -80,8 +127,19 @@
         const sender = document.createElement("strong");
         sender.textContent = message.sender;
         const time = document.createElement("time");
-        time.textContent = new Date(message.sent_at).toLocaleString();
+        time.dateTime = message.sent_at;
+        time.textContent = new Date(message.sent_at).toLocaleTimeString([], {
+            hour: "numeric",
+            minute: "2-digit"
+        });
         meta.append(sender, time);
+        if (message.is_mine) {
+            const readStatus = document.createElement("span");
+            readStatus.className = "read-status";
+            readStatus.dataset.readStatusFor = message.id;
+            readStatus.textContent = "Sent";
+            meta.append(readStatus);
+        }
 
         const content = document.createElement("p");
         content.className = "message-content";
@@ -99,7 +157,7 @@
 
         list.append(article);
         lastId = Math.max(lastId, message.id);
-        list.scrollTop = list.scrollHeight;
+        if (wasAtBottom) list.scrollTop = list.scrollHeight;
     }
 
     async function poll() {
@@ -112,14 +170,27 @@
             if (!response.ok) return;
             const data = await response.json();
             data.messages.forEach(appendMessage);
+            data.read_ids.forEach((id) => {
+                const readStatus = list.querySelector(`[data-read-status-for="${id}"]`);
+                if (readStatus) readStatus.textContent = "Seen";
+            });
+            const otherName = document.getElementById("other-participant-name");
+            if (data.other_participant && otherName) {
+                otherName.textContent = data.other_participant;
+            }
+            if (data.has_second_participant) {
+                const invitePanel = document.getElementById("invite-panel");
+                if (invitePanel) invitePanel.remove();
+            }
             if (!data.is_open) {
                 status.textContent = "Closed";
                 status.className = "status status-closed";
                 input.disabled = true;
                 form.querySelector("button[type=submit]").disabled = true;
             }
-        } catch (error) {
-            errorBox.textContent = "Connection lost. Trying again…";
+            errorBox.textContent = "";
+        } catch {
+            errorBox.textContent = "Connection lost. Reconnecting…";
         } finally {
             polling = false;
         }
@@ -147,7 +218,7 @@
             }
             input.value = "";
             await poll();
-        } catch (error) {
+        } catch {
             errorBox.textContent = "Message could not be sent. Please try again.";
         }
     });
@@ -156,16 +227,36 @@
         const button = event.target.closest(".delete-message");
         if (!button) return;
         const token = form.elements.csrfmiddlewaretoken.value;
-        const response = await fetch(button.dataset.deleteUrl, {
-            method: "POST",
-            headers: { "X-CSRFToken": token, "Accept": "application/json" }
-        });
-        if (response.ok) {
-            const article = button.closest(".message");
-            article.querySelector(".message-content").textContent = "Message deleted";
+        try {
+            const response = await fetch(button.dataset.deleteUrl, {
+                method: "POST",
+                headers: { "X-CSRFToken": token, "Accept": "application/json" }
+            });
+            if (!response.ok) {
+                errorBox.textContent = "Message could not be deleted.";
+                return;
+            }
+            button.closest(".message").querySelector(".message-content").textContent = "Message deleted";
             button.remove();
+        } catch {
+            errorBox.textContent = "Message could not be deleted.";
         }
     });
+
+    const inviteButton = document.getElementById("copy-invite");
+    if (inviteButton) {
+        inviteButton.addEventListener("click", async () => {
+            const invite = document.getElementById("invite-link");
+            try {
+                await navigator.clipboard.writeText(invite.value);
+                document.getElementById("copy-status").textContent = "Invite link copied.";
+            } catch {
+                invite.select();
+                document.execCommand("copy");
+                document.getElementById("copy-status").textContent = "Select and copy the invite link.";
+            }
+        });
+    }
 
     list.scrollTop = list.scrollHeight;
     window.setInterval(poll, 1000);

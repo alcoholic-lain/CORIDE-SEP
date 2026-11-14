@@ -1,0 +1,36 @@
+{% extends "communication/base.html" %}
+
+{% block title %}Join chat{% endblock %}
+
+{% block content %}
+<section class="form-card join-card">
+    <p class="eyebrow">PRIVATE INVITATION</p>
+    <h1>{{ conversation.title|default:"A CoRide conversation" }}</h1>
+    <p class="muted">You have been invited to join a private chat.</p>
+    {% if join_error %}<p class="form-error" role="alert">{{ join_error }}</p>{% endif %}
+    {% if participant %}
+        {% if conversation.is_open and conversation.participant_two_id is None and conversation.participant_one_id != participant.id %}
+            <form method="post">
+                {% csrf_token %}
+                <button class="button" type="submit">Join conversation</button>
+            </form>
+        {% elif conversation.participant_one_id == participant.id or conversation.participant_two_id == participant.id %}
+            <a class="button" href="{% url 'communication:conversation_detail' conversation.id %}">Open chat</a>
+        {% endif %}
+    {% elif guest_mode_enabled %}
+        <form method="post">
+            {% csrf_token %}
+            <label for="{{ name_form.display_name.id_for_label }}">Join as a guest</label>
+            {{ name_form.display_name }}
+            {{ name_form.display_name.errors }}
+            <button class="button" type="submit">Join conversation</button>
+        </form>
+        <p class="muted">Your guest identity is saved only for this browser session.</p>
+    {% else %}
+        <div class="mode-notice">
+            <strong>Guest access is disabled.</strong>
+            <p>Sign-in integration is not connected yet. Re-enable guest access with <code>CORIDE_COMMUNICATION_GUEST_MODE=true</code>.</p>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

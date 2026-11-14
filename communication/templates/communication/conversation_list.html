@@ -5,23 +5,40 @@
 {% block content %}
 <div class="page-heading">
     <div>
-        <p class="eyebrow">YOUR RIDES</p>
-        <h1>My conversations</h1>
+        <p class="eyebrow">PRIVATE MESSAGES</p>
+        <h1>Your chats</h1>
     </div>
+    <a class="button" href="{% url 'communication:create_conversation' %}">New chat</a>
 </div>
 {% if conversations %}
     <div class="card-list">
         {% for conversation in conversations %}
             <a class="conversation-card" href="{% url 'communication:conversation_detail' conversation.id %}">
-                <div>
+                <span class="avatar" aria-hidden="true">
+                    {% if conversation.participant_one_id == participant.id %}
+                        {{ conversation.participant_two.display_label|default:"+"|first|upper }}
+                    {% else %}
+                        {{ conversation.participant_one.display_label|first|upper }}
+                    {% endif %}
+                </span>
+                <div class="conversation-copy">
                     <h2>
-                        {% if conversation.passenger_id == user.id %}
-                            {{ conversation.driver.get_full_name|default:conversation.driver.get_username }}
+                        {% if conversation.title %}
+                            {{ conversation.title }}
+                        {% elif conversation.participant_one_id == participant.id %}
+                            {{ conversation.participant_two.display_label|default:"New conversation" }}
                         {% else %}
-                            {{ conversation.passenger.get_full_name|default:conversation.passenger.get_username }}
+                            {{ conversation.participant_one.display_label }}
                         {% endif %}
                     </h2>
-                    <p>Trip {{ conversation.trip_reference }} · departs {{ conversation.departure_at|date:"M j, Y, H:i" }}</p>
+                    <p>
+                        {% if conversation.participant_one_id == participant.id %}
+                            {% if conversation.participant_two %}{{ conversation.participant_two.display_label }}{% else %}Waiting for someone to join{% endif %}
+                        {% else %}
+                            {{ conversation.participant_one.display_label }}
+                        {% endif %}
+                        {% if conversation.trip_reference %} · Trip {{ conversation.trip_reference }}{% endif %}
+                    </p>
                 </div>
                 <span class="status {% if conversation.is_open %}status-open{% else %}status-closed{% endif %}">
                     {% if conversation.is_open %}Open{% else %}Closed{% endif %}
@@ -34,8 +51,10 @@
     </div>
 {% else %}
     <section class="empty-state">
-        <h2>No conversations yet</h2>
-        <p>A private chat appears here after a reservation is accepted.</p>
+        <span class="empty-icon" aria-hidden="true">✦</span>
+        <h2>Your inbox is ready</h2>
+        <p>Create a private chat and invite someone with a secure share link. You can start messaging before they join.</p>
+        <a class="button" href="{% url 'communication:create_conversation' %}">Start a conversation</a>
     </section>
 {% endif %}
 {% endblock %}

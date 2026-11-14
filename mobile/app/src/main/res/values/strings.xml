@@ -1,5 +1,13 @@
 <resources>
     <string name="app_name">CoRide</string>
+    <string name="open_navigation">Open CoRide navigation</string>
+    <string name="navigation_pages">Pages</string>
+    <string name="navigation_home">Home</string>
+    <string name="navigation_users">Users</string>
+    <string name="navigation_vehicles">Vehicles</string>
+    <string name="navigation_trips">Trips</string>
+    <string name="navigation_reservations">Reservations</string>
+    <string name="navigation_communication">Communication</string>
     <string name="searching_for_server">Looking for CoRide on this network…</string>
     <string name="connecting_to_server">Connecting to CoRide…</string>
     <string name="loading_online_server">No local server found. Loading CoRide online…</string>

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
 import android.net.nsd.NsdManager
@@ -15,9 +16,11 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -28,10 +31,10 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import java.net.Inet4Address
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
+import java.net.Inet4Address
 
 class MainActivity : Activity() {
     private lateinit var nsdManager: NsdManager
@@ -42,6 +45,10 @@ class MainActivity : Activity() {
     private lateinit var offlineScreen: LinearLayout
     private lateinit var retryButton: Button
     private lateinit var webView: WebView
+    private lateinit var navigationBar: LinearLayout
+    private lateinit var navigationDrawer: LinearLayout
+    private lateinit var navigationScrim: View
+    private lateinit var currentPathLabel: TextView
     private val mainHandler = Handler(Looper.getMainLooper())
     private var discoveryListener: NsdManager.DiscoveryListener? = null
     private var discoveryTimeout: Runnable? = null
@@ -51,6 +58,7 @@ class MainActivity : Activity() {
     private var fallbackAttempted = false
     private var loadingFallback = false
     private var currentServerHost: String? = null
+    private var currentServerOrigin: String? = null
     private var updateCheckInProgress = false
     private var updateDownloadInProgress = false
     private var pendingUpdate: PendingUpdate? = null
@@ -64,6 +72,16 @@ class MainActivity : Activity() {
     }
 
     private data class PendingUpdate(val apk: File, val versionName: String)
+    private data class NavigationDestination(val titleRes: Int, val path: String)
+
+    private val navigationDestinations = listOf(
+        NavigationDestination(R.string.navigation_home, "/"),
+        NavigationDestination(R.string.navigation_users, "/users/"),
+        NavigationDestination(R.string.navigation_vehicles, "/vehicles/"),
+        NavigationDestination(R.string.navigation_trips, "/trips/"),
+        NavigationDestination(R.string.navigation_reservations, "/reservations/"),
+        NavigationDestination(R.string.navigation_communication, "/coms/"),
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -231,9 +249,11 @@ class MainActivity : Activity() {
 
                 override fun onPageFinished(view: WebView?, url: String?) {
                     if (!isCurrentServerUrl(url)) return
+                    updateCurrentPath(url)
                     webView.visibility = View.VISIBLE
                     loaderScreen.visibility = View.GONE
                     offlineScreen.visibility = View.GONE
+                    navigationBar.visibility = View.VISIBLE
                 }
 
                 override fun onReceivedError(
@@ -264,13 +284,26 @@ class MainActivity : Activity() {
             }
         }
 
+        navigationBar = createNavigationBar(density)
+        navigationScrim = View(this).apply {
+            setBackgroundColor(Color.BLACK)
+            alpha = 0.45f
+            visibility = View.GONE
+            setOnClickListener { closeNavigationDrawer() }
+        }
+        navigationDrawer = createNavigationDrawer(density).apply {
+            visibility = View.GONE
+        }
+        val navigationBarHeight = (56 * density).toInt()
         val root = FrameLayout(this).apply {
             addView(
                 webView,
                 FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT,
-                ),
+                ).apply {
+                    topMargin = navigationBarHeight
+                },
             )
             addView(
                 loaderScreen,
@@ -286,6 +319,50 @@ class MainActivity : Activity() {
                     ViewGroup.LayoutParams.MATCH_PARENT,
                 ),
             )
+            addView(
+                navigationBar,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    navigationBarHeight,
+                    Gravity.TOP,
+                ),
+            )
+            addView(
+                navigationScrim,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                ),
+            )
+            addView(
+                navigationDrawer,
+                FrameLayout.LayoutParams(
+                    minOf(
+                        (320 * density).toInt(),
+                        (resources.displayMetrics.widthPixels * 0.85f).toInt(),
+                    ),
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    Gravity.START,
+                ),
+            )
+        }
+        root.setOnApplyWindowInsetsListener { _, insets ->
+            val statusBarInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                insets.getInsets(WindowInsets.Type.statusBars()).top
+            } else {
+                @Suppress("DEPRECATION")
+                insets.systemWindowInsetTop
+            }
+            (webView.layoutParams as FrameLayout.LayoutParams).apply {
+                topMargin = statusBarInset + navigationBarHeight
+            }.also { webView.layoutParams = it }
+            (navigationBar.layoutParams as FrameLayout.LayoutParams).apply {
+                topMargin = statusBarInset
+            }.also { navigationBar.layoutParams = it }
+            (navigationDrawer.layoutParams as FrameLayout.LayoutParams).apply {
+                topMargin = statusBarInset
+            }.also { navigationDrawer.layoutParams = it }
+            insets
         }
         setContentView(root)
 
@@ -300,7 +377,9 @@ class MainActivity : Activity() {
 
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
-        if (webView.canGoBack()) {
+        if (navigationDrawer.visibility == View.VISIBLE) {
+            closeNavigationDrawer()
+        } else if (webView.canGoBack()) {
             webView.goBack()
         } else {
             super.onBackPressed()
@@ -480,7 +559,13 @@ class MainActivity : Activity() {
 
     private fun loadServer(url: String, isFallback: Boolean) {
         loadingFallback = isFallback
-        currentServerHost = Uri.parse(url).host
+        val serverUri = Uri.parse(url)
+        currentServerHost = serverUri.host
+        currentServerOrigin = if (serverUri.scheme != null && serverUri.authority != null) {
+            "${serverUri.scheme}://${serverUri.authority}"
+        } else {
+            null
+        }
         showLoading(
             getString(
                 if (isFallback) {
@@ -504,10 +589,12 @@ class MainActivity : Activity() {
     }
 
     private fun showLoading(message: String) {
+        closeNavigationDrawer()
         loadingStatus.text = message
         loaderScreen.visibility = View.VISIBLE
         offlineScreen.visibility = View.GONE
         webView.visibility = View.GONE
+        navigationBar.visibility = View.GONE
     }
 
     private fun fallbackToHostedServer() {
@@ -530,10 +617,156 @@ class MainActivity : Activity() {
     }
 
     private fun showOfflinePage() {
+        closeNavigationDrawer()
         webView.stopLoading()
         webView.visibility = View.GONE
         loaderScreen.visibility = View.GONE
+        navigationBar.visibility = View.GONE
         offlineScreen.visibility = View.VISIBLE
+    }
+
+    private fun createNavigationBar(density: Float): LinearLayout {
+        val menuButton = TextView(this).apply {
+            text = "☰"
+            textSize = 25f
+            gravity = Gravity.CENTER
+            contentDescription = getString(R.string.open_navigation)
+            setTextColor(getColor(R.color.app_heading))
+            setOnClickListener { openNavigationDrawer() }
+        }
+        currentPathLabel = TextView(this).apply {
+            text = "/"
+            textSize = 12f
+            setTextColor(getColor(R.color.app_secondary_text))
+        }
+        val titleBlock = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(
+                TextView(this@MainActivity).apply {
+                    text = getString(R.string.app_name)
+                    textSize = 17f
+                    typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                    setTextColor(getColor(R.color.app_heading))
+                },
+            )
+            addView(currentPathLabel)
+        }
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(getColor(R.color.app_surface))
+            elevation = 4 * density
+            visibility = View.GONE
+            addView(
+                menuButton,
+                LinearLayout.LayoutParams(
+                    (56 * density).toInt(),
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                ),
+            )
+            addView(
+                titleBlock,
+                LinearLayout.LayoutParams(
+                    0,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    1f,
+                ),
+            )
+        }
+    }
+
+    private fun createNavigationDrawer(density: Float): LinearLayout {
+        val drawer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(getColor(R.color.app_surface))
+            elevation = 12 * density
+        }
+        drawer.addView(
+            TextView(this).apply {
+                text = getString(R.string.navigation_pages)
+                textSize = 20f
+                typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                setTextColor(getColor(R.color.app_heading))
+                setPadding(
+                    (20 * density).toInt(),
+                    (28 * density).toInt(),
+                    (20 * density).toInt(),
+                    (16 * density).toInt(),
+                )
+            },
+        )
+        navigationDestinations.forEach { destination ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_VERTICAL
+                isClickable = true
+                isFocusable = true
+                setPadding(
+                    (20 * density).toInt(),
+                    (10 * density).toInt(),
+                    (20 * density).toInt(),
+                    (10 * density).toInt(),
+                )
+                val selectableBackground = TypedValue()
+                if (theme.resolveAttribute(
+                        android.R.attr.selectableItemBackground,
+                        selectableBackground,
+                        true,
+                    )
+                ) {
+                    setBackgroundResource(selectableBackground.resourceId)
+                }
+                setOnClickListener { navigateToRoute(destination.path) }
+            }
+            row.addView(
+                TextView(this).apply {
+                    text = getString(destination.titleRes)
+                    textSize = 16f
+                    setTextColor(getColor(R.color.app_heading))
+                },
+            )
+            row.addView(
+                TextView(this).apply {
+                    text = destination.path
+                    textSize = 13f
+                    setTextColor(getColor(R.color.app_secondary_text))
+                },
+            )
+            drawer.addView(
+                row,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    (64 * density).toInt(),
+                ),
+            )
+        }
+        return drawer
+    }
+
+    private fun openNavigationDrawer() {
+        if (currentServerOrigin == null) return
+        navigationScrim.visibility = View.VISIBLE
+        navigationDrawer.visibility = View.VISIBLE
+    }
+
+    private fun closeNavigationDrawer() {
+        navigationScrim.visibility = View.GONE
+        navigationDrawer.visibility = View.GONE
+    }
+
+    private fun navigateToRoute(path: String) {
+        val origin = currentServerOrigin
+        if (origin == null) {
+            Log.w(TAG, "Cannot open CoRide route without a connected server")
+            return
+        }
+        loadServer("$origin$path", isFallback = loadingFallback)
+    }
+
+    private fun updateCurrentPath(url: String?) {
+        val uri = url?.let(Uri::parse) ?: return
+        currentPathLabel.text = uri.path?.takeIf(String::isNotEmpty) ?: "/"
     }
 
     private fun checkForUpdates() {

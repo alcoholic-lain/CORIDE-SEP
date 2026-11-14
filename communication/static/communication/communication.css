@@ -70,9 +70,7 @@ select {
     display: block;
     flex: none;
     width: 184px;
-    height: 50px;
-    border: 0;
-    pointer-events: none;
+    height: auto;
 }
 
 .brand-coride {
@@ -874,7 +872,7 @@ p {
 
     .brand-mark {
         width: 104px;
-        height: 38px;
+        height: auto;
     }
 
     .brand-coride {
@@ -964,7 +962,7 @@ p {
 @media (max-width: 430px) {
     .brand-mark {
         width: 82px;
-        height: 32px;
+        height: auto;
     }
 
     .brand-coride {

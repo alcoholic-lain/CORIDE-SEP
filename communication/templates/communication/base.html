@@ -10,13 +10,11 @@
 <body>
     <header class="site-header">
         <a class="brand" href="{% url 'communication:index' %}">
-            <iframe
+            <img
                 class="brand-mark"
-                src="{% static 'communication/blackberry-logo.html' %}"
-                title="Blackberry logo"
-                aria-hidden="true"
-                tabindex="-1"
-            ></iframe>
+                src="{% static 'communication/blackberry-logo.svg' %}"
+                alt="BlackBerry"
+            >
             <img class="brand-coride" src="{% static 'communication/coride-logo.svg' %}" alt="CoRide">
         </a>
         <nav aria-label="Communication">

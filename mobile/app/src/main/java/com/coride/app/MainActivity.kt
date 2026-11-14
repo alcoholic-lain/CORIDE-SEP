@@ -1,7 +1,6 @@
 package com.coride.app
 
 import android.app.Activity
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -15,7 +14,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
@@ -32,8 +30,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import java.io.File
-import java.io.FileInputStream
 import java.io.IOException
 import java.net.Inet4Address
 import org.json.JSONObject
@@ -51,6 +47,7 @@ class MainActivity : Activity() {
     private lateinit var navigationDrawer: LinearLayout
     private lateinit var navigationScrim: View
     private lateinit var currentPathLabel: TextView
+    private lateinit var updateButton: TextView
     private val mainHandler = Handler(Looper.getMainLooper())
     private var discoveryListener: NsdManager.DiscoveryListener? = null
     private var discoveryTimeout: Runnable? = null
@@ -62,10 +59,9 @@ class MainActivity : Activity() {
     private var currentServerHost: String? = null
     private var currentServerOrigin: String? = null
     private var updateCheckInProgress = false
-    private var updateDownloadInProgress = false
-    private var pendingUpdate: PendingUpdate? = null
-    private var rejectedUpdateVersion: String? = null
-    private val releaseUpdater by lazy { GitHubReleaseUpdater(applicationContext) }
+    private var offeredUpdateVersion: String? = null
+    private var latestUpdate: GitHubReleaseUpdater.AvailableUpdate? = null
+    private val releaseUpdater by lazy { GitHubReleaseUpdater() }
     private val updateCheckTask = object : Runnable {
         override fun run() {
             checkForUpdates()
@@ -73,7 +69,6 @@ class MainActivity : Activity() {
         }
     }
 
-    private data class PendingUpdate(val apk: File, val versionName: String)
     private data class NavigationDestination(val titleRes: Int, val path: String)
 
     private val navigationDestinations = listOf(
@@ -392,15 +387,6 @@ class MainActivity : Activity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        val update = pendingUpdate ?: return
-        if (canInstallPackages()) {
-            pendingUpdate = null
-            installUpdate(update)
-        }
-    }
-
     override fun onDestroy() {
         discoveryGeneration++
         stopDiscovery()
@@ -678,6 +664,32 @@ class MainActivity : Activity() {
                     1f,
                 ),
             )
+            updateButton = TextView(this@MainActivity).apply {
+                text = getString(R.string.view_update)
+                textSize = 14f
+                gravity = Gravity.CENTER
+                contentDescription = getString(R.string.view_update)
+                setTextColor(getColor(R.color.app_heading))
+                setPadding(
+                    (12 * density).toInt(),
+                    0,
+                    (12 * density).toInt(),
+                    0,
+                )
+                visibility = View.GONE
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    latestUpdate?.let { update -> openReleasePage(update.releaseUrl) }
+                }
+            }
+            addView(
+                updateButton,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                ),
+            )
         }
     }
 
@@ -824,15 +836,7 @@ class MainActivity : Activity() {
     }
 
     private fun checkForUpdates() {
-        if (
-            updateCheckInProgress ||
-            updateDownloadInProgress ||
-            pendingUpdate != null ||
-            isFinishing ||
-            isDestroyed
-        ) {
-            return
-        }
+        if (updateCheckInProgress || isFinishing || isDestroyed) return
         updateCheckInProgress = true
         Thread({
             try {
@@ -840,14 +844,15 @@ class MainActivity : Activity() {
                 mainHandler.post {
                     if (isDestroyed) return@post
                     updateCheckInProgress = false
-                    if (update == null || update.versionName == rejectedUpdateVersion) return@post
+                    if (update == null || update.versionName == offeredUpdateVersion) return@post
+                    offeredUpdateVersion = update.versionName
+                    latestUpdate = update
                     versionLabel.text = getString(
                         R.string.update_available,
                         BuildConfig.VERSION_NAME,
                         update.versionName,
                     )
-                    loadingStatus.text = getString(R.string.downloading_update)
-                    downloadUpdate(update)
+                    updateButton.visibility = View.VISIBLE
                 }
             } catch (error: IOException) {
                 Log.w(TAG, "Could not check GitHub for Android updates", error)
@@ -858,92 +863,12 @@ class MainActivity : Activity() {
         }, "CoRide-release-check").start()
     }
 
-    private fun downloadUpdate(update: GitHubReleaseUpdater.AvailableUpdate) {
-        updateDownloadInProgress = true
-        Thread({
-            try {
-                val apk = releaseUpdater.downloadAndValidate(update, BuildConfig.VERSION_CODE)
-                mainHandler.post {
-                    if (isDestroyed) return@post
-                    updateDownloadInProgress = false
-                    requestUpdateInstallation(PendingUpdate(apk, update.versionName))
-                }
-            } catch (error: IOException) {
-                Log.e(TAG, "Could not download or validate the CoRide update", error)
-                mainHandler.post {
-                    if (isDestroyed) return@post
-                    updateDownloadInProgress = false
-                    rejectedUpdateVersion = update.versionName
-                    loadingStatus.text = getString(R.string.update_failed)
-                }
-            }
-        }, "CoRide-release-download").start()
-    }
-
-    private fun requestUpdateInstallation(update: PendingUpdate) {
-        pendingUpdate = update
-        if (!canInstallPackages()) {
-            loadingStatus.text = getString(R.string.install_permission_required)
-            try {
-                startActivity(
-                    Intent(
-                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        Uri.parse("package:$packageName"),
-                    ),
-                )
-            } catch (error: android.content.ActivityNotFoundException) {
-                Log.e(TAG, "Android could not open app-install permission settings", error)
-                Toast.makeText(this, R.string.install_permission_required, Toast.LENGTH_LONG).show()
-            }
-            return
-        }
-        pendingUpdate = null
-        installUpdate(update)
-    }
-
-    private fun canInstallPackages(): Boolean {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
-            packageManager.canRequestPackageInstalls()
-    }
-
-    private fun installUpdate(update: PendingUpdate) {
+    private fun openReleasePage(releaseUrl: String) {
         try {
-            val installer = packageManager.packageInstaller
-            val parameters = android.content.pm.PackageInstaller.SessionParams(
-                android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL,
-            ).apply {
-                setAppPackageName(packageName)
-            }
-            val sessionId = installer.createSession(parameters)
-            installer.openSession(sessionId).use { session ->
-                FileInputStream(update.apk).use { input ->
-                    session.openWrite("base.apk", 0, update.apk.length()).use { output ->
-                        input.copyTo(output)
-                        session.fsync(output)
-                    }
-                }
-                val callbackIntent = Intent(this, UpdateInstallReceiver::class.java)
-                    .putExtra(UpdateInstallReceiver.EXTRA_VERSION, update.versionName)
-                val mutabilityFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    PendingIntent.FLAG_MUTABLE
-                } else {
-                    0
-                }
-                val callback = PendingIntent.getBroadcast(
-                    this,
-                    sessionId,
-                    callbackIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or mutabilityFlag,
-                )
-                session.commit(callback.intentSender)
-            }
-            loadingStatus.text = getString(R.string.install_confirmation)
-        } catch (error: IOException) {
-            Log.e(TAG, "Could not start Android package installation", error)
-            loadingStatus.text = getString(R.string.update_failed)
-        } catch (error: SecurityException) {
-            Log.e(TAG, "Android denied package installation", error)
-            loadingStatus.text = getString(R.string.update_failed)
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(releaseUrl)))
+        } catch (error: android.content.ActivityNotFoundException) {
+            Log.e(TAG, "No browser is available to open the CoRide release page", error)
+            Toast.makeText(this, R.string.release_page_unavailable, Toast.LENGTH_LONG).show()
         }
     }
 

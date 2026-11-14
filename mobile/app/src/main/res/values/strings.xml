@@ -15,8 +15,6 @@
     <string name="retry_discovery">Try again</string>
     <string name="app_version">v%1$s</string>
     <string name="update_available">v%1$s · v%2$s available</string>
-    <string name="downloading_update">Downloading update…</string>
-    <string name="install_permission_required">Allow CoRide to install updates</string>
-    <string name="install_confirmation">Update downloaded. Confirm the Android installer.</string>
-    <string name="update_failed">Update could not be installed. It will be retried later.</string>
+    <string name="view_update">View update</string>
+    <string name="release_page_unavailable">No browser is available to open the CoRide release.</string>
 </resources>

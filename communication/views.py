@@ -8,14 +8,21 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Avg, Count, Q
-from django.http import HttpResponse, JsonResponse
+from django.db.models.functions import Coalesce
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
-from .forms import GuestNameForm, MessageForm, NewConversationForm, ReviewForm
+from .forms import (
+    GuestNameForm,
+    MessageEditForm,
+    MessageForm,
+    NewConversationForm,
+    ReviewForm,
+)
 from .identity import (
     create_guest_participant,
     get_request_participant,
@@ -29,7 +36,7 @@ from .models import (
     MessageReaction,
     Review,
 )
-from .services import create_message, delete_message
+from .services import create_message, delete_message, edit_message
 
 
 def _csv_cell(value):
@@ -76,6 +83,81 @@ def _reaction_summaries(reactions, participant):
             }
         )
     return summaries
+
+
+def _message_attachment(message):
+    if message.is_deleted or not message.attachment:
+        return None
+    return {
+        "url": reverse(
+            "communication:message_attachment",
+            args=[message.pk],
+        ),
+        "name": message.attachment_name,
+        "content_type": message.attachment_content_type,
+        "size": message.attachment_size,
+    }
+
+
+def _reply_summary(message):
+    if message is None:
+        return None
+    return {
+        "id": message.pk,
+        "sender": message.sender_participant.display_label,
+        "content": (
+            "Message deleted"
+            if message.is_deleted
+            else message.content or "Attachment"
+        )[:160],
+    }
+
+
+def _message_payload(message, participant):
+    return {
+        "id": message.pk,
+        "sender": message.sender_participant.display_label,
+        "sender_id": message.sender_participant_id,
+        "is_mine": message.sender_participant_id == participant.pk,
+        "content": "Message deleted" if message.is_deleted else message.content,
+        "deleted": message.is_deleted,
+        "sent_at": message.sent_at.isoformat(),
+        "edited_at": message.edited_at.isoformat() if message.edited_at else None,
+        "pinned": message.pinned_at is not None,
+        "reply": _reply_summary(message.reply_to),
+        "attachment": _message_attachment(message),
+        "delete_url": reverse(
+            "communication:message_delete",
+            args=[message.pk],
+        )
+        if message.sender_participant_id == participant.pk and not message.is_deleted
+        else None,
+        "edit_url": reverse(
+            "communication:message_edit",
+            args=[message.pk],
+        )
+        if message.sender_participant_id == participant.pk and not message.is_deleted
+        else None,
+        "pin_url": reverse(
+            "communication:message_pin",
+            args=[message.pk],
+        )
+        if not message.is_deleted
+        else None,
+        "reaction_url": reverse(
+            "communication:message_reaction",
+            args=[message.pk],
+        )
+        if not message.is_deleted
+        else None,
+    }
+
+
+def _is_online(participant):
+    return bool(
+        participant
+        and participant.last_seen_at >= timezone.now() - timedelta(minutes=1)
+    )
 
 
 def index(request):
@@ -289,6 +371,13 @@ def _conversation_for_participant(request, conversation_id):
     )
     if not conversation.includes(participant):
         raise PermissionDenied
+    now = timezone.now()
+    if participant.last_seen_at < now - timedelta(seconds=30):
+        CommunicationParticipant.objects.filter(
+            pk=participant.pk,
+            last_seen_at__lt=now - timedelta(seconds=30),
+        ).update(last_seen_at=now)
+        participant.last_seen_at = now
     return conversation, participant, None
 
 
@@ -308,6 +397,8 @@ def conversation_detail(request, conversation_id):
         conversation.messages.select_related(
             "sender_participant",
             "sender",
+            "reply_to",
+            "reply_to__sender_participant",
         )
     )
     reaction_summaries = _reaction_summaries(
@@ -345,9 +436,13 @@ def conversation_detail(request, conversation_id):
             "message_form": message_form,
             "participant": participant,
             "other_participant": other_participant,
+            "other_online": _is_online(other_participant),
             "invite_url": invite_url,
             "latest_message_id": messages[-1].pk if messages else 0,
             "reaction_choices": MessageReaction.Emoji.choices,
+            "pinned_messages": [
+                message for message in messages if message.pinned_at is not None
+            ],
         },
     )
 
@@ -369,7 +464,11 @@ def poll_messages(request, conversation_id):
 
     messages = list(
         conversation.messages.filter(pk__gt=after)
-        .select_related("sender_participant")
+        .select_related(
+            "sender_participant",
+            "reply_to",
+            "reply_to__sender_participant",
+        )
         .order_by("pk")[:100]
     )
     unread_ids = [
@@ -406,6 +505,20 @@ def poll_messages(request, conversation_id):
         MessageReaction.objects.filter(message__conversation=conversation),
         participant,
     )
+    updated_messages = (
+        conversation.messages.filter(
+            Q(edited_at__isnull=False) | Q(deleted_at__isnull=False)
+        )
+        .annotate(last_changed=Coalesce("edited_at", "deleted_at"))
+        .select_related("sender_participant", "reply_to", "reply_to__sender_participant")
+        .order_by("-last_changed")[:100]
+    )
+    pinned_ids = list(
+        conversation.messages.filter(pinned_at__isnull=False).values_list(
+            "pk",
+            flat=True,
+        )
+    )
     return JsonResponse(
         {
             "is_open": conversation.is_open,
@@ -415,35 +528,18 @@ def poll_messages(request, conversation_id):
             "other_participant": (
                 other_participant.display_label if other_participant else None
             ),
+            "other_online": _is_online(other_participant),
             "has_second_participant": conversation.participant_two_id is not None,
             "read_ids": read_ids,
             "reactions": {
                 str(message_id): summaries
                 for message_id, summaries in reactions.items()
             },
-            "messages": [
-                {
-                    "id": message.pk,
-                    "sender": message.sender_participant.display_label,
-                    "is_mine": message.sender_participant_id == participant.pk,
-                    "content": "Message deleted"
-                    if message.is_deleted
-                    else message.content,
-                    "deleted": message.is_deleted,
-                    "sent_at": message.sent_at.isoformat(),
-                    "delete_url": reverse(
-                        "communication:message_delete",
-                        args=[message.pk],
-                    )
-                    if message.sender_participant_id == participant.pk
-                    and not message.is_deleted
-                    else None,
-                    "reaction_url": reverse(
-                        "communication:message_reaction",
-                        args=[message.pk],
-                    ),
-                }
-                for message in messages
+            "pinned_ids": pinned_ids,
+            "messages": [_message_payload(message, participant) for message in messages],
+            "updated_messages": [
+                _message_payload(message, participant)
+                for message in updated_messages
             ],
         }
     )
@@ -491,7 +587,7 @@ def send_message(request, conversation_id):
     if not conversation.is_open:
         return JsonResponse({"error": "This conversation is closed."}, status=409)
 
-    form = MessageForm(request.POST)
+    form = MessageForm(request.POST, request.FILES)
     if not form.is_valid():
         return JsonResponse(
             {"errors": form.errors.get_json_data()},
@@ -499,33 +595,26 @@ def send_message(request, conversation_id):
         )
 
     try:
+        reply_to_id = form.cleaned_data.get("reply_to")
+        reply_to = (
+            get_object_or_404(
+                conversation.messages.select_related("sender_participant"),
+                pk=reply_to_id,
+            )
+            if reply_to_id
+            else None
+        )
         message = create_message(
             conversation=conversation,
             sender=participant,
             content=form.cleaned_data["content"],
+            attachment=form.cleaned_data.get("attachment"),
+            reply_to=reply_to,
         )
     except ValidationError as error:
         return JsonResponse({"error": " ".join(error.messages)}, status=400)
 
-    return JsonResponse(
-        {
-            "id": message.pk,
-            "content": message.content,
-            "sent_at": message.sent_at.isoformat(),
-            "sender": participant.display_label,
-            "is_mine": True,
-            "deleted": False,
-            "delete_url": reverse(
-                "communication:message_delete",
-                args=[message.pk],
-            ),
-            "reaction_url": reverse(
-                "communication:message_reaction",
-                args=[message.pk],
-            ),
-        },
-        status=201,
-    )
+    return JsonResponse(_message_payload(message, participant), status=201)
 
 
 @require_POST
@@ -586,6 +675,122 @@ def message_delete(request, message_id):
         raise PermissionDenied
     delete_message(message=message, sender=participant)
     return JsonResponse({"deleted": True, "id": message.pk})
+
+
+@require_POST
+def message_edit(request, message_id):
+    message = get_object_or_404(
+        Message.objects.select_related("conversation", "sender_participant"),
+        pk=message_id,
+    )
+    conversation, participant, response = _conversation_for_participant(
+        request,
+        message.conversation_id,
+    )
+    if response:
+        return response
+    if message.sender_participant_id != participant.pk:
+        raise PermissionDenied
+    if message.is_deleted:
+        return JsonResponse(
+            {"error": "Deleted messages cannot be edited."},
+            status=409,
+        )
+    if not conversation.is_open:
+        return JsonResponse({"error": "This conversation is closed."}, status=409)
+
+    form = MessageEditForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse(
+            {"errors": form.errors.get_json_data()},
+            status=400,
+        )
+    try:
+        edit_message(
+            message=message,
+            sender=participant,
+            content=form.cleaned_data["content"],
+        )
+    except ValidationError as error:
+        return JsonResponse({"error": " ".join(error.messages)}, status=400)
+    return JsonResponse(
+        {
+            "id": message.pk,
+            "content": message.content,
+            "edited_at": message.edited_at.isoformat(),
+        }
+    )
+
+
+@require_POST
+def message_pin(request, message_id):
+    message = get_object_or_404(
+        Message.objects.select_related("conversation"),
+        pk=message_id,
+    )
+    conversation, participant, response = _conversation_for_participant(
+        request,
+        message.conversation_id,
+    )
+    if response:
+        return response
+    if message.is_deleted:
+        return JsonResponse(
+            {"error": "Deleted messages cannot be pinned."},
+            status=409,
+        )
+
+    if message.pinned_at is None:
+        message.pinned_at = timezone.now()
+        message.pinned_by = participant
+    else:
+        message.pinned_at = None
+        message.pinned_by = None
+    message.save(update_fields=["pinned_at", "pinned_by"])
+    return JsonResponse(
+        {
+            "id": message.pk,
+            "pinned": message.pinned_at is not None,
+            "pinned_ids": list(
+                conversation.messages.filter(pinned_at__isnull=False).values_list(
+                    "pk",
+                    flat=True,
+                )
+            ),
+        }
+    )
+
+
+@require_GET
+def message_attachment(request, message_id):
+    message = get_object_or_404(
+        Message.objects.select_related("conversation"),
+        pk=message_id,
+    )
+    _, _, response = _conversation_for_participant(
+        request,
+        message.conversation_id,
+    )
+    if response:
+        return response
+    if message.is_deleted or not message.attachment:
+        raise Http404
+
+    try:
+        file_handle = message.attachment.open("rb")
+    except FileNotFoundError as error:
+        raise Http404 from error
+
+    content_type = message.attachment_content_type or "application/octet-stream"
+    response = FileResponse(
+        file_handle,
+        as_attachment=not content_type.startswith("image/"),
+        filename=message.attachment_name or "attachment",
+        content_type=content_type,
+    )
+    response["Cache-Control"] = "private, no-store"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 def _eligible_conversation(reviewer, target, trip_id):

@@ -31,14 +31,49 @@
                         </span>
                         {% if conversation.trip_reference %} · Trip {{ conversation.trip_reference }}{% endif %}
                     </p>
+                    <p class="participant-presence">
+                        <span id="participant-presence-dot" class="presence-dot{% if other_online %} presence-online{% endif %}"></span>
+                        <span id="participant-presence">{% if other_online %}Online{% else %}Offline{% endif %}</span>
+                    </p>
                     <p id="typing-indicator" class="typing-indicator" aria-live="polite" hidden></p>
                 </div>
             </div>
         </div>
-        <span id="chat-status" class="status {% if conversation.is_open %}status-open{% else %}status-closed{% endif %}">
-            {% if conversation.is_open %}Active{% else %}Closed{% endif %}
-        </span>
+        <div class="chat-header-actions">
+            <button id="message-search-toggle" class="icon-button" type="button" aria-label="Search messages" title="Search messages">⌕</button>
+            <button id="pinned-toggle" class="icon-button" type="button" aria-label="Show pinned messages" title="Pinned messages">
+                📌 <span id="pinned-count">{{ pinned_messages|length }}</span>
+            </button>
+            <span id="chat-status" class="status {% if conversation.is_open %}status-open{% else %}status-closed{% endif %}">
+                {% if conversation.is_open %}Active{% else %}Closed{% endif %}
+            </span>
+        </div>
     </header>
+
+    <form id="message-search" class="message-search" role="search" hidden>
+        <input id="message-search-input" type="search" placeholder="Search in conversation" aria-label="Search messages">
+        <span id="message-search-count" aria-live="polite"></span>
+        <button id="message-search-close" class="icon-button" type="button" aria-label="Close search">×</button>
+    </form>
+
+    <aside id="pinned-panel" class="pinned-panel" hidden>
+        <div class="pinned-panel-heading">
+            <strong>Pinned messages</strong>
+            <button id="pinned-close" class="icon-button" type="button" aria-label="Close pinned messages">×</button>
+        </div>
+        <ul id="pinned-list">
+            {% for message in pinned_messages %}
+                <li>
+                    <button class="pinned-jump" type="button" data-jump-to="{{ message.id }}">
+                        <strong>{{ message.sender_participant.display_label }}</strong>
+                        <span>{% if message.is_deleted %}Message deleted{% else %}{{ message.content|default:"Attachment"|truncatechars:90 }}{% endif %}</span>
+                    </button>
+                </li>
+            {% empty %}
+                <li class="pinned-empty">No pinned messages yet.</li>
+            {% endfor %}
+        </ul>
+    </aside>
 
     {% if invite_url %}
         <aside class="invite-panel" id="invite-panel">
@@ -65,7 +100,12 @@
             <article
                 class="message {% if message.sender_participant_id == participant.id %}message-mine{% endif %}"
                 data-message-id="{{ message.id }}"
+                data-sender-id="{{ message.sender_participant_id }}"
+                data-sent-at="{{ message.sent_at|date:'c' }}"
+                data-pinned="{% if message.pinned_at %}true{% else %}false{% endif %}"
                 data-reaction-url="{% url 'communication:message_reaction' message.id %}"
+                {% if message.sender_participant_id == participant.id and not message.is_deleted %}data-edit-url="{% url 'communication:message_edit' message.id %}" data-delete-url="{% url 'communication:message_delete' message.id %}"{% endif %}
+                {% if not message.is_deleted %}data-pin-url="{% url 'communication:message_pin' message.id %}"{% endif %}
             >
                 <span class="avatar message-avatar" aria-hidden="true">
                     {{ message.sender_participant.display_label|first|upper }}
@@ -73,13 +113,34 @@
                 <div class="message-meta">
                     <strong>{{ message.sender_participant.display_label }}</strong>
                     <time datetime="{{ message.sent_at|date:'c' }}">{{ message.sent_at|date:"M j, H:i" }}</time>
+                    <span class="edited-label" {% if not message.edited_at %}hidden{% endif %}>edited</span>
+                    {% if message.pinned_at %}<span class="pinned-mark" title="Pinned message">📌</span>{% endif %}
                     {% if message.sender_participant_id == participant.id %}
                         <span class="read-status" data-read-status-for="{{ message.id }}">
                             {% if message.read_at %}Seen{% else %}Sent{% endif %}
                         </span>
                     {% endif %}
                 </div>
-                <p class="message-content">{% if message.is_deleted %}Message deleted{% else %}{{ message.content }}{% endif %}</p>
+                {% if message.reply_to %}
+                    <div class="message-reply" data-reply-id="{{ message.reply_to_id }}">
+                        <strong>{{ message.reply_to.sender_participant.display_label }}</strong>
+                        <span>{% if message.reply_to.is_deleted %}Message deleted{% else %}{{ message.reply_to.content|default:"Attachment"|truncatechars:160 }}{% endif %}</span>
+                    </div>
+                {% endif %}
+                {% if message.content or message.is_deleted %}
+                    <p class="message-content">{% if message.is_deleted %}Message deleted{% else %}{{ message.content }}{% endif %}</p>
+                {% endif %}
+                {% if message.attachment and not message.is_deleted %}
+                    <div class="message-attachment">
+                        <a href="{% url 'communication:message_attachment' message.id %}"{% if message.attachment_content_type|slice:":6" != "image/" %} download{% endif %}>
+                            {% if message.attachment_content_type|slice:":6" == "image/" %}
+                                <img class="attachment-image" src="{% url 'communication:message_attachment' message.id %}" alt="{{ message.attachment_name }}" loading="lazy">
+                            {% else %}
+                                <span class="file-card"><span aria-hidden="true">📄</span><strong>{{ message.attachment_name }}</strong><small>{{ message.attachment_size|filesizeformat }}</small></span>
+                            {% endif %}
+                        </a>
+                    </div>
+                {% endif %}
                 <div class="message-reaction-row" data-reactions-for="{{ message.id }}">
                     <div class="message-reactions">
                         {% for reaction in message.reaction_summaries %}
@@ -93,9 +154,11 @@
                             </button>
                         {% endfor %}
                     </div>
-                    {% if not message.is_deleted %}
+                </div>
+                {% if not message.is_deleted %}
+                    <div class="message-toolbar">
                         <details class="react-menu">
-                            <summary aria-label="Add reaction" title="Add reaction">+</summary>
+                            <summary aria-label="Add reaction" title="Add reaction">☺</summary>
                             <div class="react-options">
                                 {% for emoji, label in reaction_choices %}
                                     <button
@@ -107,10 +170,20 @@
                                 {% endfor %}
                             </div>
                         </details>
-                    {% endif %}
-                </div>
-                {% if message.sender_participant_id == participant.id and not message.is_deleted %}
-                    <button class="text-button delete-message" type="button" data-delete-url="{% url 'communication:message_delete' message.id %}">Delete</button>
+                        <button class="message-action reply-message" type="button" aria-label="Reply" title="Reply">↩</button>
+                        <details class="message-more">
+                            <summary aria-label="More message actions" title="More message actions">•••</summary>
+                            <div class="message-more-options">
+                                <button class="pin-message" type="button">{% if message.pinned_at %}Unpin message{% else %}Pin message{% endif %}</button>
+                                {% if message.sender_participant_id == participant.id and message.content %}
+                                    <button class="edit-message" type="button">Edit message</button>
+                                {% endif %}
+                                {% if message.sender_participant_id == participant.id %}
+                                    <button class="delete-message" type="button">Delete message</button>
+                                {% endif %}
+                            </div>
+                        </details>
+                    </div>
                 {% endif %}
             </article>
         {% empty %}
@@ -127,10 +200,35 @@
         class="send-form"
         data-send-url="{% url 'communication:send_message' conversation.id %}"
         data-typing-url="{% url 'communication:typing_status' conversation.id %}"
+        enctype="multipart/form-data"
         method="post"
     >
         {% csrf_token %}
-        {{ message_form.content }}
+        {{ message_form.reply_to }}
+        <div id="reply-composer" class="reply-composer" hidden>
+            <div>
+                <strong id="reply-composer-sender"></strong>
+                <span id="reply-composer-content"></span>
+            </div>
+            <button id="reply-composer-close" class="icon-button" type="button" aria-label="Cancel reply">×</button>
+        </div>
+        <div class="compose-box">
+            <label class="attachment-button" for="id_attachment" aria-label="Attach a file" title="Attach a file">＋</label>
+            {{ message_form.attachment }}
+            {{ message_form.content }}
+            <details class="emoji-picker">
+                <summary aria-label="Choose emoji" title="Choose emoji">☺</summary>
+                <div class="emoji-options">
+                    {% for emoji, label in reaction_choices %}
+                        <button type="button" data-compose-emoji="{{ emoji }}" title="{{ label }}">{{ emoji }}</button>
+                    {% endfor %}
+                </div>
+            </details>
+            <div id="attachment-preview" class="attachment-preview" hidden>
+                <span id="attachment-preview-name"></span>
+                <button id="attachment-clear" type="button" aria-label="Remove attachment">×</button>
+            </div>
+        </div>
         <button class="button send-button" type="submit" {% if not conversation.is_open %}disabled{% endif %}>Send</button>
     </form>
     <p id="send-error" class="form-error" aria-live="polite"></p>
@@ -141,11 +239,13 @@
     {% endif %}
 </section>
 
-<template id="reaction-controls-template">
+<template id="message-controls-template">
     <div class="message-reaction-row">
         <div class="message-reactions"></div>
+    </div>
+    <div class="message-toolbar">
         <details class="react-menu">
-            <summary aria-label="Add reaction" title="Add reaction">+</summary>
+            <summary aria-label="Add reaction" title="Add reaction">☺</summary>
             <div class="react-options">
                 {% for emoji, label in reaction_choices %}
                     <button
@@ -155,6 +255,15 @@
                         aria-label="React with {{ label }}"
                     >{{ emoji }}</button>
                 {% endfor %}
+            </div>
+        </details>
+        <button class="message-action reply-message" type="button" aria-label="Reply" title="Reply">↩</button>
+        <details class="message-more">
+            <summary aria-label="More message actions" title="More message actions">•••</summary>
+            <div class="message-more-options">
+                <button class="pin-message" type="button">Pin message</button>
+                <button class="edit-message" type="button">Edit message</button>
+                <button class="delete-message" type="button">Delete message</button>
             </div>
         </details>
     </div>
@@ -167,8 +276,21 @@
     const errorBox = document.getElementById("send-error");
     const status = document.getElementById("chat-status");
     const typingIndicator = document.getElementById("typing-indicator");
+    const presenceLabel = document.getElementById("participant-presence");
+    const presenceDot = document.getElementById("participant-presence-dot");
     const input = form.elements.content;
+    const replyInput = form.elements.reply_to;
+    const attachmentInput = form.elements.attachment;
+    const replyComposer = document.getElementById("reply-composer");
+    const attachmentPreview = document.getElementById("attachment-preview");
+    const searchPanel = document.getElementById("message-search");
+    const searchInput = document.getElementById("message-search-input");
+    const searchCount = document.getElementById("message-search-count");
+    const pinnedPanel = document.getElementById("pinned-panel");
+    const pinnedList = document.getElementById("pinned-list");
+    const pinnedCount = document.getElementById("pinned-count");
     let lastId = Number(list.dataset.nextId) || 0;
+    let pinnedSignature = null;
     let polling = false;
     let typingActive = false;
     let typingTimer;
@@ -178,6 +300,11 @@
     function renderReactions(article, reactions) {
         const container = article.querySelector(".message-reactions");
         if (!container) return;
+        const signature = reactions
+            .map((reaction) => `${reaction.emoji}:${reaction.count}:${reaction.reacted}`)
+            .join("|");
+        if (container.dataset.signature === signature) return;
+        container.dataset.signature = signature;
         container.replaceChildren();
 
         reactions.forEach((reaction) => {
@@ -191,6 +318,283 @@
                 `${reaction.count} ${reaction.emoji} reactions`
             );
             container.append(button);
+        });
+    }
+
+    function renderAttachment(article, attachment) {
+        if (!attachment) return;
+        const wrapper = document.createElement("div");
+        wrapper.className = "message-attachment";
+        const link = document.createElement("a");
+        link.href = attachment.url;
+
+        if (attachment.content_type.startsWith("image/")) {
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            const image = document.createElement("img");
+            image.className = "attachment-image";
+            image.src = attachment.url;
+            image.alt = attachment.name;
+            image.loading = "lazy";
+            link.append(image);
+        } else {
+            link.download = attachment.name;
+            const card = document.createElement("span");
+            card.className = "file-card";
+            const icon = document.createElement("span");
+            icon.setAttribute("aria-hidden", "true");
+            icon.textContent = "📄";
+            const name = document.createElement("strong");
+            name.textContent = attachment.name;
+            const size = document.createElement("small");
+            size.textContent = `${Math.ceil(attachment.size / 1024)} KB`;
+            card.append(icon, name, size);
+            link.append(card);
+        }
+        wrapper.append(link);
+        article.append(wrapper);
+    }
+
+    function renderReply(article, reply) {
+        if (!reply) return;
+        const quote = document.createElement("div");
+        quote.className = "message-reply";
+        quote.dataset.replyId = reply.id;
+        const sender = document.createElement("strong");
+        sender.textContent = reply.sender;
+        const content = document.createElement("span");
+        content.textContent = reply.content;
+        quote.append(sender, content);
+        article.append(quote);
+    }
+
+    function applyGrouping() {
+        let previous = null;
+        list.querySelectorAll(".message").forEach((article) => {
+            const currentTime = Date.parse(article.dataset.sentAt);
+            const previousTime = previous ? Date.parse(previous.dataset.sentAt) : NaN;
+            const sameSender = previous
+                && previous.dataset.senderId === article.dataset.senderId;
+            const closeTogether = Number.isFinite(currentTime)
+                && Number.isFinite(previousTime)
+                && currentTime >= previousTime
+                && currentTime - previousTime < 5 * 60 * 1000;
+            article.classList.toggle("message-grouped", Boolean(sameSender && closeTogether));
+            previous = article;
+        });
+    }
+
+    function applyMessageSearch() {
+        const query = searchInput.value.trim().toLocaleLowerCase();
+        const messages = [...list.querySelectorAll(".message")];
+        let matches = 0;
+        messages.forEach((article) => {
+            const searchableText = [
+                ...article.querySelectorAll(
+                    ".message-meta strong, .message-content, .message-reply, .message-attachment"
+                )
+            ].map((element) => element.textContent).join(" ").toLocaleLowerCase();
+            const matched = !query || searchableText.includes(query);
+            article.hidden = !matched;
+            if (matched) matches += 1;
+        });
+        searchCount.textContent = query
+            ? `${matches} of ${messages.length} messages`
+            : "";
+    }
+
+    function renderPinnedMessages(ids) {
+        const pinnedIds = new Set((ids || []).map(String));
+        list.querySelectorAll(".message").forEach((article) => {
+            const pinned = pinnedIds.has(article.dataset.messageId);
+            article.dataset.pinned = String(pinned);
+            article.classList.toggle("message-pinned", pinned);
+            const mark = article.querySelector(".pinned-mark");
+            if (pinned && !mark) {
+                const badge = document.createElement("span");
+                badge.className = "pinned-mark";
+                badge.title = "Pinned message";
+                badge.textContent = "📌";
+                article.querySelector(".message-meta").append(badge);
+            } else if (!pinned && mark) {
+                mark.remove();
+            }
+            const button = article.querySelector(".pin-message");
+            if (button) button.textContent = pinned ? "Unpin message" : "Pin message";
+        });
+
+        const pinned = [...list.querySelectorAll('.message[data-pinned="true"]')]
+            .filter((article) => !article.classList.contains("message-deleted"));
+        const nextPinnedSignature = pinned.map((article) => {
+            const sender = article.querySelector(".message-meta strong").textContent;
+            const content = article.querySelector(".message-content");
+            const attachment = article.querySelector(".message-attachment");
+            const snippet = content
+                ? content.textContent
+                : attachment
+                    ? attachment.textContent
+                    : "Attachment";
+            return `${article.dataset.messageId}:${sender}:${snippet}`;
+        }).join("|");
+        if (nextPinnedSignature === pinnedSignature) return;
+        pinnedSignature = nextPinnedSignature;
+
+        pinnedList.replaceChildren();
+        if (!pinned.length) {
+            const empty = document.createElement("li");
+            empty.className = "pinned-empty";
+            empty.textContent = "No pinned messages yet.";
+            pinnedList.append(empty);
+        } else {
+            pinned.forEach((article) => {
+                const item = document.createElement("li");
+                const button = document.createElement("button");
+                button.className = "pinned-jump";
+                button.type = "button";
+                button.dataset.jumpTo = article.dataset.messageId;
+                const sender = document.createElement("strong");
+                sender.textContent = article.querySelector(".message-meta strong").textContent;
+                const snippet = document.createElement("span");
+                const content = article.querySelector(".message-content");
+                const attachment = article.querySelector(".message-attachment");
+                snippet.textContent = content
+                    ? content.textContent
+                    : attachment
+                        ? attachment.textContent
+                        : "Attachment";
+                button.append(sender, snippet);
+                item.append(button);
+                pinnedList.append(item);
+            });
+        }
+        pinnedCount.textContent = String(pinned.length);
+    }
+
+    function updateMessage(article, message) {
+        if (!article) return;
+        const replyPreview = message.deleted
+            ? "Message deleted"
+            : message.content || "Attachment";
+        list.querySelectorAll(
+            `.message-reply[data-reply-id="${message.id}"] span`
+        ).forEach((preview) => {
+            preview.textContent = replyPreview;
+        });
+        if (message.deleted) {
+            const content = article.querySelector(".message-content");
+            if (content) {
+                content.hidden = false;
+                content.textContent = "Message deleted";
+            } else {
+                const deletedContent = document.createElement("p");
+                deletedContent.className = "message-content";
+                deletedContent.textContent = "Message deleted";
+                article.append(deletedContent);
+            }
+            article.querySelector(".message-attachment")?.remove();
+            article.querySelector(".message-reply")?.remove();
+            article.querySelector(".message-toolbar")?.remove();
+            article.dataset.pinned = "false";
+            article.classList.add("message-deleted");
+            renderReactions(article, []);
+            return;
+        }
+
+        if (typeof message.pinned === "boolean") {
+            article.dataset.pinned = String(message.pinned);
+        }
+        const content = article.querySelector(".message-content");
+        if (content && message.content !== undefined) {
+            content.hidden = !message.content;
+            content.textContent = message.content;
+        }
+        let editedLabel = article.querySelector(".edited-label");
+        if (message.edited_at) {
+            if (!editedLabel) {
+                editedLabel = document.createElement("span");
+                editedLabel.className = "edited-label";
+                article.querySelector(".message-meta").append(editedLabel);
+            }
+            editedLabel.hidden = false;
+            editedLabel.textContent = "edited";
+        }
+    }
+
+    function setReply(article) {
+        const content = article.querySelector(".message-content");
+        const attachment = article.querySelector(".message-attachment");
+        replyInput.value = article.dataset.messageId;
+        document.getElementById("reply-composer-sender").textContent =
+            article.querySelector(".message-meta strong").textContent;
+        document.getElementById("reply-composer-content").textContent = content
+            ? content.textContent.slice(0, 160)
+            : attachment
+                ? attachment.textContent.trim()
+                : "Message deleted";
+        replyComposer.hidden = false;
+        input.focus();
+    }
+
+    function clearReply() {
+        replyInput.value = "";
+        replyComposer.hidden = true;
+    }
+
+    function startEditing(article) {
+        const content = article.querySelector(".message-content");
+        if (!content || article.querySelector(".message-editor")) return;
+        content.hidden = true;
+        const editor = document.createElement("form");
+        editor.className = "message-editor";
+        editor.style.gridArea = "content";
+        const textarea = document.createElement("textarea");
+        textarea.maxLength = 1000;
+        textarea.value = content.textContent;
+        const controls = document.createElement("div");
+        controls.className = "editor-controls";
+        const save = document.createElement("button");
+        save.className = "button";
+        save.type = "submit";
+        save.textContent = "Save";
+        const cancel = document.createElement("button");
+        cancel.className = "text-button";
+        cancel.type = "button";
+        cancel.textContent = "Cancel";
+        controls.append(save, cancel);
+        editor.append(textarea, controls);
+        content.after(editor);
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+        cancel.addEventListener("click", () => {
+            content.hidden = false;
+            editor.remove();
+        });
+        editor.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const body = new URLSearchParams({ content: textarea.value });
+            try {
+                const response = await fetch(article.dataset.editUrl, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": form.elements.csrfmiddlewaretoken.value,
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Accept": "application/json"
+                    },
+                    body
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    errorBox.textContent = data.error || "Message could not be edited.";
+                    return;
+                }
+                content.textContent = data.content;
+                content.hidden = false;
+                editor.remove();
+                updateMessage(article, data);
+            } catch {
+                errorBox.textContent = "Message could not be edited. Please try again.";
+            }
         });
     }
 
@@ -245,7 +649,13 @@
         const article = document.createElement("article");
         article.className = `message${message.is_mine ? " message-mine" : ""}`;
         article.dataset.messageId = message.id;
-        article.dataset.reactionUrl = message.reaction_url;
+        article.dataset.senderId = message.sender_id;
+        article.dataset.sentAt = message.sent_at;
+        article.dataset.pinned = String(message.pinned);
+        if (message.reaction_url) article.dataset.reactionUrl = message.reaction_url;
+        if (message.delete_url) article.dataset.deleteUrl = message.delete_url;
+        if (message.edit_url) article.dataset.editUrl = message.edit_url;
+        if (message.pin_url) article.dataset.pinUrl = message.pin_url;
 
         const avatar = document.createElement("span");
         avatar.className = "avatar message-avatar";
@@ -264,6 +674,19 @@
             minute: "2-digit"
         });
         meta.append(sender, time);
+        if (message.edited_at) {
+            const edited = document.createElement("span");
+            edited.className = "edited-label";
+            edited.textContent = "edited";
+            meta.append(edited);
+        }
+        if (message.pinned) {
+            const pinned = document.createElement("span");
+            pinned.className = "pinned-mark";
+            pinned.title = "Pinned message";
+            pinned.textContent = "📌";
+            meta.append(pinned);
+        }
         if (message.is_mine) {
             const readStatus = document.createElement("span");
             readStatus.className = "read-status";
@@ -275,25 +698,31 @@
         const content = document.createElement("p");
         content.className = "message-content";
         content.textContent = message.deleted ? "Message deleted" : message.content;
-        article.append(avatar, meta, content);
+        article.append(avatar, meta);
+        renderReply(article, message.reply);
+        if (message.content || message.deleted) article.append(content);
+        renderAttachment(article, message.attachment);
         if (!message.deleted) {
             article.append(
-                document.getElementById("reaction-controls-template").content.cloneNode(true)
+                document.getElementById("message-controls-template").content.cloneNode(true)
             );
             renderReactions(article, []);
-        }
-
-        if (message.delete_url && !message.deleted) {
-            const button = document.createElement("button");
-            button.className = "text-button delete-message";
-            button.type = "button";
-            button.dataset.deleteUrl = message.delete_url;
-            button.textContent = "Delete";
-            article.append(button);
+            const controls = article.querySelector(".message-toolbar");
+            if (!message.edit_url) controls.querySelector(".edit-message").remove();
+            if (!message.delete_url) controls.querySelector(".delete-message").remove();
+            controls.querySelector(".pin-message").textContent = message.pinned
+                ? "Unpin message"
+                : "Pin message";
         }
 
         list.append(article);
         lastId = Math.max(lastId, message.id);
+        applyGrouping();
+        applyMessageSearch();
+        renderPinnedMessages(
+            [...list.querySelectorAll('.message[data-pinned="true"]')]
+                .map((item) => item.dataset.messageId)
+        );
         if (wasAtBottom) list.scrollTop = list.scrollHeight;
     }
 
@@ -307,12 +736,21 @@
             if (!response.ok) return;
             const data = await response.json();
             data.messages.forEach(appendMessage);
+            data.updated_messages.forEach((message) => {
+                updateMessage(
+                    list.querySelector(`[data-message-id="${message.id}"]`),
+                    message
+                );
+            });
             list.querySelectorAll(".message").forEach((article) => {
                 renderReactions(
                     article,
                     data.reactions[article.dataset.messageId] || []
                 );
             });
+            renderPinnedMessages(data.pinned_ids);
+            applyGrouping();
+            applyMessageSearch();
             data.read_ids.forEach((id) => {
                 const readStatus = list.querySelector(`[data-read-status-for="${id}"]`);
                 if (readStatus) readStatus.textContent = "Seen";
@@ -320,6 +758,10 @@
             const otherName = document.getElementById("other-participant-name");
             if (data.other_participant && otherName) {
                 otherName.textContent = data.other_participant;
+            }
+            if (presenceLabel && presenceDot) {
+                presenceLabel.textContent = data.other_online ? "Online" : "Offline";
+                presenceDot.classList.toggle("presence-online", data.other_online);
             }
             typingIndicator.hidden = !data.typing;
             typingIndicator.textContent = data.typing
@@ -365,7 +807,10 @@
                     .join(" ");
                 return;
             }
-            input.value = "";
+            form.reset();
+            clearReply();
+            attachmentPreview.hidden = true;
+            document.getElementById("attachment-preview-name").textContent = "";
             await poll();
         } catch {
             errorBox.textContent = "Message could not be sent. Please try again.";
@@ -373,6 +818,20 @@
     });
 
     list.addEventListener("click", async (event) => {
+        const jumpButton = event.target.closest("[data-jump-to]");
+        if (jumpButton) {
+            const target = list.querySelector(
+                `[data-message-id="${jumpButton.dataset.jumpTo}"]`
+            );
+            if (target) {
+                target.scrollIntoView({ behavior: "smooth", block: "center" });
+                target.classList.add("message-highlight");
+                window.setTimeout(() => target.classList.remove("message-highlight"), 1400);
+                pinnedPanel.hidden = true;
+            }
+            return;
+        }
+
         const reactionButton = event.target.closest("[data-reaction-emoji]");
         if (reactionButton) {
             const article = reactionButton.closest(".message");
@@ -404,11 +863,49 @@
             return;
         }
 
+        const replyButton = event.target.closest(".reply-message");
+        if (replyButton) {
+            setReply(replyButton.closest(".message"));
+            return;
+        }
+
+        const editButton = event.target.closest(".edit-message");
+        if (editButton) {
+            startEditing(editButton.closest(".message"));
+            return;
+        }
+
+        const pinButton = event.target.closest(".pin-message");
+        if (pinButton) {
+            const article = pinButton.closest(".message");
+            try {
+                const response = await fetch(article.dataset.pinUrl, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": form.elements.csrfmiddlewaretoken.value,
+                        "Accept": "application/json"
+                    }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    errorBox.textContent = data.error || "Pin could not be updated.";
+                    return;
+                }
+                renderPinnedMessages(data.pinned_ids);
+                const menu = pinButton.closest(".message-more");
+                if (menu) menu.open = false;
+            } catch {
+                errorBox.textContent = "Pin could not be updated. Please try again.";
+            }
+            return;
+        }
+
         const button = event.target.closest(".delete-message");
         if (!button) return;
+        const article = button.closest(".message");
         const token = form.elements.csrfmiddlewaretoken.value;
         try {
-            const response = await fetch(button.dataset.deleteUrl, {
+            const response = await fetch(article.dataset.deleteUrl, {
                 method: "POST",
                 headers: { "X-CSRFToken": token, "Accept": "application/json" }
             });
@@ -416,15 +913,69 @@
                 errorBox.textContent = "Message could not be deleted.";
                 return;
             }
-            const article = button.closest(".message");
-            article.querySelector(".message-content").textContent = "Message deleted";
-            renderReactions(article, []);
-            const menu = article.querySelector(".react-menu");
-            if (menu) menu.remove();
-            button.remove();
+            updateMessage(article, { deleted: true });
+            renderPinnedMessages(
+                [...list.querySelectorAll('.message[data-pinned="true"]')]
+                    .map((item) => item.dataset.messageId)
+            );
         } catch {
             errorBox.textContent = "Message could not be deleted.";
         }
+    });
+
+    form.addEventListener("click", (event) => {
+        const emojiButton = event.target.closest("[data-compose-emoji]");
+        if (!emojiButton) return;
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        input.setRangeText(emojiButton.dataset.composeEmoji, start, end, "end");
+        input.focus();
+        emojiButton.closest(".emoji-picker").open = false;
+        handleTypingInput();
+    });
+
+    document.getElementById("reply-composer-close").addEventListener("click", clearReply);
+
+    const attachmentClear = document.getElementById("attachment-clear");
+    attachmentInput.addEventListener("change", () => {
+        const file = attachmentInput.files[0];
+        if (!file) {
+            attachmentPreview.hidden = true;
+            return;
+        }
+        if (file.size > 8 * 1024 * 1024) {
+            attachmentInput.value = "";
+            attachmentPreview.hidden = true;
+            errorBox.textContent = "Files must be 8 MB or smaller.";
+            return;
+        }
+        errorBox.textContent = "";
+        document.getElementById("attachment-preview-name").textContent = file.name;
+        attachmentPreview.hidden = false;
+    });
+    attachmentClear.addEventListener("click", () => {
+        attachmentInput.value = "";
+        attachmentPreview.hidden = true;
+        document.getElementById("attachment-preview-name").textContent = "";
+    });
+
+    document.getElementById("message-search-toggle").addEventListener("click", () => {
+        searchPanel.hidden = !searchPanel.hidden;
+        if (!searchPanel.hidden) searchInput.focus();
+    });
+    document.getElementById("message-search-close").addEventListener("click", () => {
+        searchInput.value = "";
+        applyMessageSearch();
+        searchPanel.hidden = true;
+    });
+    searchPanel.addEventListener("submit", (event) => event.preventDefault());
+    searchInput.addEventListener("input", applyMessageSearch);
+
+    document.getElementById("pinned-toggle").addEventListener("click", () => {
+        pinnedPanel.hidden = !pinnedPanel.hidden;
+    });
+    document.getElementById("pinned-close").addEventListener("click", () => {
+        pinnedPanel.hidden = true;
     });
 
     list.addEventListener("pointerover", (event) => {
@@ -462,6 +1013,7 @@
     }
 
     list.scrollTop = list.scrollHeight;
+    poll();
     window.setInterval(poll, 1000);
 })();
 </script>

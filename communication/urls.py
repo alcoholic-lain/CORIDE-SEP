@@ -39,6 +39,21 @@ urlpatterns = [
         name="message_reaction",
     ),
     path(
+        "chat/messages/<int:message_id>/edit/",
+        views.message_edit,
+        name="message_edit",
+    ),
+    path(
+        "chat/messages/<int:message_id>/pin/",
+        views.message_pin,
+        name="message_pin",
+    ),
+    path(
+        "chat/messages/<int:message_id>/attachment/",
+        views.message_attachment,
+        name="message_attachment",
+    ),
+    path(
         "chat/messages/<int:message_id>/delete/",
         views.message_delete,
         name="message_delete",

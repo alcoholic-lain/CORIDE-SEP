@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -72,11 +74,57 @@ def mark_trip_completed(trip_reference, completed_at=None):
     ).update(trip_completed_at=completed_at or timezone.now())
 
 
-def create_message(*, conversation, sender, content):
+def create_message(
+    *,
+    conversation,
+    sender,
+    content="",
+    attachment=None,
+    reply_to=None,
+):
     if not conversation.includes(sender):
         raise PermissionDenied
     if not conversation.is_open:
         raise ValidationError("This conversation is closed.")
+
+    content = (content or "").strip()
+    if not content and attachment is None:
+        raise ValidationError({"content": "Add a message or an attachment."})
+    if len(content) > 1000:
+        raise ValidationError({"content": "Message cannot exceed 1000 characters."})
+    if content and is_blocked(content):
+        raise ValidationError({"content": "Message not sent. Please rephrase it."})
+    if reply_to and reply_to.conversation_id != conversation.pk:
+        raise ValidationError({"reply_to": "Replies must be in the same conversation."})
+
+    message = Message(
+        conversation=conversation,
+        sender=sender.user,
+        sender_participant=sender,
+        content=content,
+        attachment=attachment or "",
+        attachment_name=(
+            Path(attachment.name).name[:255] if attachment is not None else ""
+        ),
+        attachment_content_type=(
+            getattr(attachment, "validated_content_type", "")
+            if attachment is not None
+            else ""
+        ),
+        attachment_size=attachment.size if attachment is not None else 0,
+        has_attachment=attachment is not None,
+        reply_to=reply_to,
+    )
+    message.full_clean()
+    message.save()
+    return message
+
+
+def edit_message(*, message, sender, content):
+    if message.sender_participant_id != sender.pk:
+        raise PermissionDenied
+    if message.is_deleted:
+        raise ValidationError("Deleted messages cannot be edited.")
 
     content = content.strip()
     if not content:
@@ -86,14 +134,10 @@ def create_message(*, conversation, sender, content):
     if is_blocked(content):
         raise ValidationError({"content": "Message not sent. Please rephrase it."})
 
-    message = Message(
-        conversation=conversation,
-        sender=sender.user,
-        sender_participant=sender,
-        content=content,
-    )
+    message.content = content
+    message.edited_at = timezone.now()
     message.full_clean()
-    message.save()
+    message.save(update_fields=["content", "edited_at"])
     return message
 
 
@@ -104,5 +148,7 @@ def delete_message(*, message, sender):
     if message.deleted_at is None:
         message.reactions.all().delete()
         message.deleted_at = timezone.now()
-        message.save(update_fields=["deleted_at"])
+        message.pinned_at = None
+        message.pinned_by = None
+        message.save(update_fields=["deleted_at", "pinned_at", "pinned_by"])
     return message

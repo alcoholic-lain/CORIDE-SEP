@@ -1,5 +1,7 @@
 from datetime import timedelta
+from pathlib import Path
 import secrets
+from uuid import uuid4
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -11,6 +13,11 @@ from django.utils import timezone
 
 def create_invite_code():
     return secrets.token_urlsafe(24)
+
+
+def message_attachment_path(instance, filename):
+    extension = Path(filename).suffix.lower()
+    return f"communication/attachments/{uuid4().hex}{extension}"
 
 
 class CommunicationParticipant(models.Model):
@@ -179,17 +186,42 @@ class Message(models.Model):
         on_delete=models.CASCADE,
         related_name="sent_messages",
     )
-    content = models.TextField(max_length=1000)
+    content = models.TextField(max_length=1000, blank=True)
+    attachment = models.FileField(
+        upload_to=message_attachment_path,
+        blank=True,
+        max_length=255,
+    )
+    attachment_name = models.CharField(max_length=255, blank=True, default="")
+    attachment_content_type = models.CharField(max_length=100, blank=True, default="")
+    attachment_size = models.PositiveIntegerField(default=0)
+    has_attachment = models.BooleanField(default=False)
+    reply_to = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="replies",
+    )
     sent_at = models.DateTimeField(default=timezone.now, db_index=True)
     read_at = models.DateTimeField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
+    edited_at = models.DateTimeField(null=True, blank=True)
+    pinned_at = models.DateTimeField(null=True, blank=True)
+    pinned_by = models.ForeignKey(
+        CommunicationParticipant,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pinned_messages",
+    )
 
     class Meta:
         ordering = ["id"]
         constraints = [
             models.CheckConstraint(
-                condition=~Q(content=""),
-                name="communication_message_not_empty",
+                condition=~Q(content="") | Q(has_attachment=True),
+                name="communication_message_content_or_attachment",
             ),
         ]
 
@@ -202,9 +234,9 @@ class Message(models.Model):
 
     def clean(self):
         errors = {}
-        if not self.content or not self.content.strip():
-            errors["content"] = "Message cannot be empty."
-        elif len(self.content) > 1000:
+        if not (self.content or "").strip() and not self.has_attachment:
+            errors["content"] = "Add a message or an attachment."
+        elif len(self.content or "") > 1000:
             errors["content"] = "Message cannot exceed 1000 characters."
         if (
             self.conversation_id
@@ -214,6 +246,12 @@ class Message(models.Model):
             errors["sender_participant"] = (
                 "Only conversation participants may send messages."
             )
+        if (
+            self.reply_to_id
+            and self.conversation_id
+            and self.reply_to.conversation_id != self.conversation_id
+        ):
+            errors["reply_to"] = "Replies must be in the same conversation."
         if errors:
             raise ValidationError(errors)
 

@@ -1,8 +1,10 @@
+import tempfile
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -288,6 +290,203 @@ class ConversationTests(CommunicationTestCase):
         self.assertTrue(response.json()["removed"])
         self.assertEqual(response.json()["reactions"], [])
         self.assertFalse(MessageReaction.objects.exists())
+
+    def test_sender_can_edit_and_edits_sync_through_polling(self):
+        message = Message.objects.create(
+            conversation=self.conversation,
+            sender=self.passenger,
+            sender_participant=self.passenger_participant,
+            content="Original message",
+        )
+        edit_url = reverse("communication:message_edit", args=[message.pk])
+        self.client.force_login(self.driver)
+        self.assertEqual(
+            self.client.post(edit_url, {"content": "Not my message"}).status_code,
+            403,
+        )
+
+        self.client.force_login(self.passenger)
+        response = self.client.post(edit_url, {"content": "Updated message"})
+        self.assertEqual(response.status_code, 200)
+        message.refresh_from_db()
+        self.assertEqual(message.content, "Updated message")
+        self.assertIsNotNone(message.edited_at)
+
+        self.client.force_login(self.driver)
+        response = self.client.get(
+            reverse("communication:poll_messages", args=[self.conversation.pk]),
+            {"after": message.pk},
+        )
+        self.assertEqual(
+            response.json()["updated_messages"][0]["content"],
+            "Updated message",
+        )
+        self.client.force_login(self.passenger)
+        self.assertEqual(
+            self.client.post(edit_url, {"content": "   "}).status_code,
+            400,
+        )
+
+    def test_deleted_messages_sync_through_polling(self):
+        message = Message.objects.create(
+            conversation=self.conversation,
+            sender=self.passenger,
+            sender_participant=self.passenger_participant,
+            content="Remove this message",
+        )
+        self.client.force_login(self.passenger)
+        delete_url = reverse("communication:message_delete", args=[message.pk])
+        self.assertEqual(self.client.post(delete_url).status_code, 200)
+
+        self.client.force_login(self.driver)
+        response = self.client.get(
+            reverse("communication:poll_messages", args=[self.conversation.pk]),
+            {"after": message.pk},
+        )
+        updated_messages = response.json()["updated_messages"]
+        self.assertEqual(len(updated_messages), 1)
+        self.assertEqual(updated_messages[0]["id"], message.pk)
+        self.assertTrue(updated_messages[0]["deleted"])
+        self.assertEqual(updated_messages[0]["content"], "Message deleted")
+
+    def test_replies_are_scoped_to_the_conversation_and_sync_in_poll(self):
+        original = Message.objects.create(
+            conversation=self.conversation,
+            sender=self.driver,
+            sender_participant=self.driver_participant,
+            content="Where should we meet?",
+        )
+        other_conversation = Conversation.objects.create(
+            participant_one=self.passenger_participant,
+            participant_two=None,
+            title="Another chat",
+        )
+        foreign_message = Message.objects.create(
+            conversation=other_conversation,
+            sender=self.passenger,
+            sender_participant=self.passenger_participant,
+            content="Private reply target",
+        )
+        self.client.force_login(self.passenger)
+        send_url = reverse(
+            "communication:send_message",
+            args=[self.conversation.pk],
+        )
+
+        response = self.client.post(
+            send_url,
+            {"content": "At the main entrance", "reply_to": original.pk},
+        )
+        self.assertEqual(response.status_code, 201)
+        reply = Message.objects.get(conversation=self.conversation, reply_to=original)
+        self.assertEqual(reply.content, "At the main entrance")
+
+        response = self.client.get(
+            reverse("communication:poll_messages", args=[self.conversation.pk]),
+            {"after": original.pk},
+        )
+        self.assertEqual(
+            response.json()["messages"][0]["reply"],
+            {
+                "id": original.pk,
+                "sender": self.driver_participant.display_label,
+                "content": "Where should we meet?",
+            },
+        )
+        response = self.client.post(
+            send_url,
+            {"content": "Cross-chat reply", "reply_to": foreign_message.pk},
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_message_pin_is_shared_and_toggleable_by_participants(self):
+        message = Message.objects.create(
+            conversation=self.conversation,
+            sender=self.passenger,
+            sender_participant=self.passenger_participant,
+            content="Pickup is at the north gate",
+        )
+        pin_url = reverse("communication:message_pin", args=[message.pk])
+        self.client.force_login(self.outsider)
+        self.assertEqual(self.client.post(pin_url).status_code, 403)
+
+        self.client.force_login(self.driver)
+        response = self.client.post(pin_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["pinned"])
+        message.refresh_from_db()
+        self.assertEqual(message.pinned_by, self.driver_participant)
+
+        self.client.force_login(self.passenger)
+        response = self.client.get(
+            reverse("communication:poll_messages", args=[self.conversation.pk]),
+            {"after": 0},
+        )
+        self.assertEqual(response.json()["pinned_ids"], [message.pk])
+        response = self.client.post(pin_url)
+        self.assertFalse(response.json()["pinned"])
+        message.refresh_from_db()
+        self.assertIsNone(message.pinned_at)
+
+    def test_private_image_attachment_upload_download_and_type_validation(self):
+        image_bytes = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+        send_url = reverse(
+            "communication:send_message",
+            args=[self.conversation.pk],
+        )
+        with tempfile.TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                self.client.force_login(self.passenger)
+                response = self.client.post(
+                    send_url,
+                    {
+                        "content": "",
+                        "attachment": SimpleUploadedFile(
+                            "pickup.png",
+                            image_bytes,
+                            content_type="image/png",
+                        ),
+                    },
+                )
+                self.assertEqual(response.status_code, 201)
+                message = Message.objects.get()
+                self.assertTrue(message.has_attachment)
+                self.assertEqual(message.attachment_content_type, "image/png")
+                self.assertEqual(response.json()["attachment"]["name"], "pickup.png")
+
+                attachment_url = reverse(
+                    "communication:message_attachment",
+                    args=[message.pk],
+                )
+                self.client.force_login(self.outsider)
+                self.assertEqual(self.client.get(attachment_url).status_code, 403)
+
+                self.client.force_login(self.driver)
+                response = self.client.get(attachment_url)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response["Content-Type"], "image/png")
+                self.assertEqual(response["X-Content-Type-Options"], "nosniff")
+                self.assertEqual(b"".join(response.streaming_content), image_bytes)
+
+                self.client.force_login(self.passenger)
+                invalid = self.client.post(
+                    send_url,
+                    {
+                        "content": "",
+                        "attachment": SimpleUploadedFile(
+                            "not-an-image.png",
+                            b"not a PNG",
+                            content_type="image/png",
+                        ),
+                    },
+                )
+                self.assertEqual(invalid.status_code, 400)
+                self.assertEqual(Message.objects.count(), 1)
+
+                self.client.post(
+                    reverse("communication:message_delete", args=[message.pk])
+                )
+                self.assertEqual(self.client.get(attachment_url).status_code, 404)
 
     def test_invalid_cursor_is_rejected(self):
         self.client.force_login(self.passenger)

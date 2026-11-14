@@ -67,6 +67,9 @@
                 data-message-id="{{ message.id }}"
                 data-reaction-url="{% url 'communication:message_reaction' message.id %}"
             >
+                <span class="avatar message-avatar" aria-hidden="true">
+                    {{ message.sender_participant.display_label|first|upper }}
+                </span>
                 <div class="message-meta">
                     <strong>{{ message.sender_participant.display_label }}</strong>
                     <time datetime="{{ message.sent_at|date:'c' }}">{{ message.sent_at|date:"M j, H:i" }}</time>
@@ -244,6 +247,12 @@
         article.dataset.messageId = message.id;
         article.dataset.reactionUrl = message.reaction_url;
 
+        const avatar = document.createElement("span");
+        avatar.className = "avatar message-avatar";
+        avatar.setAttribute("aria-hidden", "true");
+        const senderInitial = [...message.sender][0];
+        avatar.textContent = senderInitial ? senderInitial.toLocaleUpperCase() : "?";
+
         const meta = document.createElement("div");
         meta.className = "message-meta";
         const sender = document.createElement("strong");
@@ -266,7 +275,7 @@
         const content = document.createElement("p");
         content.className = "message-content";
         content.textContent = message.deleted ? "Message deleted" : message.content;
-        article.append(meta, content);
+        article.append(avatar, meta, content);
         if (!message.deleted) {
             article.append(
                 document.getElementById("reaction-controls-template").content.cloneNode(true)
@@ -416,6 +425,22 @@
         } catch {
             errorBox.textContent = "Message could not be deleted.";
         }
+    });
+
+    list.addEventListener("pointerover", (event) => {
+        if (event.pointerType === "touch") return;
+        const article = event.target.closest(".message");
+        if (!article || article.contains(event.relatedTarget)) return;
+        const menu = article.querySelector(".react-menu");
+        if (menu) menu.open = true;
+    });
+
+    list.addEventListener("pointerout", (event) => {
+        if (event.pointerType === "touch") return;
+        const article = event.target.closest(".message");
+        if (!article || article.contains(event.relatedTarget)) return;
+        const menu = article.querySelector(".react-menu");
+        if (menu && !menu.contains(document.activeElement)) menu.open = false;
     });
 
     input.addEventListener("input", handleTypingInput);

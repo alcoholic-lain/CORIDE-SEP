@@ -20,7 +20,7 @@ CoRide est une plateforme de covoiturage qui met en relation conducteurs et pass
 
 ## État du projet
 
-Les applications sont des squelettes avec des pages d’attente partagées. Les fonctionnalités décrites dans les spécifications restent à implémenter. Consultez le journal et l’aperçu de chaque application :
+La plupart des modules sont encore des squelettes. Le module Communication comprend maintenant le chat invité et les fonctionnalités de retour. Consultez le journal, la spécification et l’aperçu de chaque application :
 
 | Application | Journal | Spécification | Capture |
 |---|---|---|---|
@@ -41,3 +41,4 @@ Les applications sont des squelettes avec des pages d’attente partagées. Les 
 ## Développement
 
 Consultez [DEV.md](DEV.md) pour installer et lancer le projet.
+Le client Android natif se trouve dans `mobile/`; ses instructions de test sont également documentées dans [DEV.md](DEV.md).

@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">CoRide</string>
+    <string name="open_navigation">Open CoRide navigation</string>
+    <string name="navigation_pages">Pages</string>
+    <string name="navigation_home">Home</string>
+    <string name="navigation_users">Users</string>
+    <string name="navigation_vehicles">Vehicles</string>
+    <string name="navigation_trips">Trips</string>
+    <string name="navigation_reservations">Reservations</string>
+    <string name="navigation_communication">Communication</string>
+    <string name="searching_for_server">Looking for CoRide on this network…</string>
+    <string name="connecting_to_server">Connecting to CoRide…</string>
+    <string name="loading_online_server">No local server found. Loading CoRide online…</string>
+    <string name="server_offline">CoRide is offline.\nWe could not reach a local or hosted server.\nCheck your connection and try again.</string>
+    <string name="retry_discovery">Try again</string>
+    <string name="app_version">v%1$s</string>
+    <string name="update_available">v%1$s · v%2$s available</string>
+    <string name="view_update">View update</string>
+    <string name="update_prompt_title">New CoRide release</string>
+    <string name="update_prompt_message">Version %1$s is available. Open its GitHub release page?</string>
+    <string name="open_github_release">Open GitHub</string>
+    <string name="not_now">Not now</string>
+    <string name="release_page_unavailable">No browser is available to open the CoRide release.</string>
+</resources>

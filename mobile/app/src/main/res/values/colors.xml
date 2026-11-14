@@ -1,0 +1,5 @@
+<resources>
+    <color name="app_surface">#F2F7F6</color>
+    <color name="app_heading">#172F46</color>
+    <color name="app_secondary_text">#60778A</color>
+</resources>

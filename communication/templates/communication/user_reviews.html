@@ -1,0 +1,40 @@
+{% extends "communication/base.html" %}
+
+{% block title %}Reviews{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">COMMUNITY FEEDBACK</p>
+        <h1>{{ target.get_full_name|default:target.get_username }}</h1>
+        {% if average_rating %}
+            <p class="rating-summary">★ {{ average_rating }} <span>({{ review_count }} reviews)</span></p>
+        {% else %}
+            <p class="muted">Not enough reviews yet · {{ review_count }} total</p>
+        {% endif %}
+    </div>
+</div>
+<div class="card-list">
+    {% for review in reviews %}
+        <article class="review-card">
+            <div class="review-heading">
+                <strong>{{ review.reviewer.get_full_name|default:review.reviewer.get_username }}</strong>
+                <span class="rating-stars" aria-label="{{ review.rating }} out of 5 stars">★ {{ review.rating }}/5</span>
+            </div>
+            <p>{{ review.comment|default:"No comment." }}</p>
+            <p class="muted">Trip {{ review.trip_reference }} · {{ review.review_date|date:"M j, Y" }}</p>
+            {% if review.reviewer_id == user.id %}
+                <div class="review-actions">
+                    <a href="{% url 'communication:review_update' review.id %}">Edit</a>
+                    <form method="post" action="{% url 'communication:review_delete' review.id %}">
+                        {% csrf_token %}
+                        <button class="text-button" type="submit">Delete</button>
+                    </form>
+                </div>
+            {% endif %}
+        </article>
+    {% empty %}
+        <section class="empty-state"><p>No reviews yet.</p></section>
+    {% endfor %}
+</div>
+{% endblock %}

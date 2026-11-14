@@ -1,0 +1,41 @@
+{% extends "communication/base.html" %}
+
+{% block title %}My chats{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">YOUR RIDES</p>
+        <h1>My conversations</h1>
+    </div>
+</div>
+{% if conversations %}
+    <div class="card-list">
+        {% for conversation in conversations %}
+            <a class="conversation-card" href="{% url 'communication:conversation_detail' conversation.id %}">
+                <div>
+                    <h2>
+                        {% if conversation.passenger_id == user.id %}
+                            {{ conversation.driver.get_full_name|default:conversation.driver.get_username }}
+                        {% else %}
+                            {{ conversation.passenger.get_full_name|default:conversation.passenger.get_username }}
+                        {% endif %}
+                    </h2>
+                    <p>Trip {{ conversation.trip_reference }} · departs {{ conversation.departure_at|date:"M j, Y, H:i" }}</p>
+                </div>
+                <span class="status {% if conversation.is_open %}status-open{% else %}status-closed{% endif %}">
+                    {% if conversation.is_open %}Open{% else %}Closed{% endif %}
+                </span>
+                {% if conversation.unread_count %}
+                    <span class="unread">{{ conversation.unread_count }} new</span>
+                {% endif %}
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <section class="empty-state">
+        <h2>No conversations yet</h2>
+        <p>A private chat appears here after a reservation is accepted.</p>
+    </section>
+{% endif %}
+{% endblock %}

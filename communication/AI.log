@@ -1,21 +1,29 @@
 # Communication app status
 
-Updated: 2026-11-13
+Updated: 2026-11-14
 
-## Current state
+## Implemented
 
-- Django app is registered in `config/settings.py`.
-- `/coms/` resolves to the app's `index` view.
-- The view delegates to the shared `CORIDE.module_page()` placeholder renderer.
-- No chat, review or rating models, real-time messaging, content filtering, or feature tests are implemented.
-- Requirements are documented in [05_communication-feedback.md](05_communication-feedback.md).
+- Private conversations and persistent messages using Django's configured user model.
+- `open_conversation()`, `close_conversation()` and `mark_trip_completed()` integration services.
+- Participant-only chat pages, one-second message polling, read receipts and sender-only soft deletion.
+- Twenty-four-hour chat expiry and the `close_conversations` management command.
+- Reviews limited to completed trips and their participants; one review per person per trip.
+- Rating summaries hidden until three reviews, staff review moderation and CSV export.
+- Whole-word moderation with basic accent, repetition and character-substitution normalization.
+- Responsive communication pages and tests for permissions, messaging, reviews, moderation and exports.
 
-## Changes so far
+## Integration limits
 
-- Scaffolded the app with Django's `startapp` command.
-- Added the app URL configuration and project route.
-- Replaced the generated empty view with a module-specific placeholder.
+- The reservations and trips apps do not yet define models or call the communication services. Until they do, conversations must be created through `open_conversation()` and trips marked complete through `mark_trip_completed()`.
+- Django Channels and Redis are not configured. Chat uses HTTP polling once per second instead of WebSockets.
+- Configure `COMMUNICATION_BLOCKED_TERMS` in Django settings or the `CORIDE_BLOCKED_TERMS` environment variable. No moderation vocabulary is bundled, and an ML classifier is not implemented.
+- Only CSV review export is available; PDF and Excel require additional dependencies.
 
-## Screenshot
+## Checks
 
-![Current communication-module placeholder](screenshots/coms.png)
+```powershell
+uv run manage.py check
+uv run manage.py test communication
+uv run manage.py makemigrations --check --dry-run
+```

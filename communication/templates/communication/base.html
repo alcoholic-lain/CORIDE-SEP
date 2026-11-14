@@ -1,0 +1,29 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Communication{% endblock %} | CoRide</title>
+    <link rel="stylesheet" href="{% static 'communication/communication.css' %}">
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="{% url 'communication:index' %}">CoRide <span>Comms</span></a>
+        <nav aria-label="Communication">
+            <a href="{% url 'communication:conversation_list' %}">Chats</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'communication:user_reviews' user.id %}">My reviews</a>
+            {% endif %}
+        </nav>
+    </header>
+    <main class="page">
+        {% if messages %}
+            {% for message in messages %}
+                <p class="notice">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

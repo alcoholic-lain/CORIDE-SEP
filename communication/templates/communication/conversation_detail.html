@@ -1,0 +1,174 @@
+{% extends "communication/base.html" %}
+
+{% block title %}Chat with {% if conversation.passenger_id == user.id %}{{ conversation.driver.get_username }}{% else %}{{ conversation.passenger.get_username }}{% endif %}{% endblock %}
+
+{% block content %}
+<section class="chat-shell">
+    <div class="chat-heading">
+        <div>
+            <a class="back-link" href="{% url 'communication:conversation_list' %}">← All conversations</a>
+            <h1>
+                {% if conversation.passenger_id == user.id %}
+                    {{ conversation.driver.get_full_name|default:conversation.driver.get_username }}
+                {% else %}
+                    {{ conversation.passenger.get_full_name|default:conversation.passenger.get_username }}
+                {% endif %}
+            </h1>
+            <p>Trip {{ conversation.trip_reference }} · {{ conversation.departure_at|date:"M j, Y, H:i" }}</p>
+        </div>
+        <span id="chat-status" class="status {% if conversation.is_open %}status-open{% else %}status-closed{% endif %}">
+            {% if conversation.is_open %}Open{% else %}Closed{% endif %}
+        </span>
+    </div>
+
+    <div
+        id="messages"
+        class="message-list"
+        data-poll-url="{% url 'communication:poll_messages' conversation.id %}"
+        data-next-id="{% with latest=chat_messages.last %}{{ latest.id|default:0 }}{% endwith %}"
+    >
+        {% for message in chat_messages %}
+            <article class="message {% if message.sender_id == user.id %}message-mine{% endif %}" data-message-id="{{ message.id }}">
+                <div class="message-meta">
+                    <strong>{{ message.sender.get_full_name|default:message.sender.get_username }}</strong>
+                    <time>{{ message.sent_at|date:"M j, H:i" }}</time>
+                </div>
+                <p class="message-content">{% if message.is_deleted %}Message deleted{% else %}{{ message.content }}{% endif %}</p>
+                {% if message.sender_id == user.id and not message.is_deleted %}
+                    <button class="text-button delete-message" type="button" data-delete-url="{% url 'communication:message_delete' message.id %}">Delete</button>
+                {% endif %}
+            </article>
+        {% empty %}
+            <p id="empty-messages" class="empty-chat">No messages yet. Say hello.</p>
+        {% endfor %}
+    </div>
+
+    <form
+        id="send-form"
+        class="send-form"
+        data-send-url="{% url 'communication:send_message' conversation.id %}"
+        method="post"
+    >
+        {% csrf_token %}
+        {{ message_form.content }}
+        <button class="button" type="submit" {% if not conversation.is_open %}disabled{% endif %}>Send</button>
+    </form>
+    <p id="send-error" class="form-error" aria-live="polite"></p>
+    <p class="chat-footnote">Messages are private to the trip participants. Chat closes 24 hours after departure.</p>
+</section>
+
+<script>
+(() => {
+    const list = document.getElementById("messages");
+    const form = document.getElementById("send-form");
+    const errorBox = document.getElementById("send-error");
+    const status = document.getElementById("chat-status");
+    const input = form.elements.content;
+    let lastId = Number(list.dataset.nextId) || 0;
+    let polling = false;
+
+    function appendMessage(message) {
+        const empty = document.getElementById("empty-messages");
+        if (empty) empty.remove();
+
+        const article = document.createElement("article");
+        article.className = `message${message.is_mine ? " message-mine" : ""}`;
+        article.dataset.messageId = message.id;
+
+        const meta = document.createElement("div");
+        meta.className = "message-meta";
+        const sender = document.createElement("strong");
+        sender.textContent = message.sender;
+        const time = document.createElement("time");
+        time.textContent = new Date(message.sent_at).toLocaleString();
+        meta.append(sender, time);
+
+        const content = document.createElement("p");
+        content.className = "message-content";
+        content.textContent = message.deleted ? "Message deleted" : message.content;
+        article.append(meta, content);
+
+        if (message.delete_url && !message.deleted) {
+            const button = document.createElement("button");
+            button.className = "text-button delete-message";
+            button.type = "button";
+            button.dataset.deleteUrl = message.delete_url;
+            button.textContent = "Delete";
+            article.append(button);
+        }
+
+        list.append(article);
+        lastId = Math.max(lastId, message.id);
+        list.scrollTop = list.scrollHeight;
+    }
+
+    async function poll() {
+        if (polling) return;
+        polling = true;
+        try {
+            const response = await fetch(`${list.dataset.pollUrl}?after=${lastId}`, {
+                headers: { "Accept": "application/json" }
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            data.messages.forEach(appendMessage);
+            if (!data.is_open) {
+                status.textContent = "Closed";
+                status.className = "status status-closed";
+                input.disabled = true;
+                form.querySelector("button[type=submit]").disabled = true;
+            }
+        } catch (error) {
+            errorBox.textContent = "Connection lost. Trying again…";
+        } finally {
+            polling = false;
+        }
+    }
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        errorBox.textContent = "";
+        const body = new FormData(form);
+        try {
+            const response = await fetch(form.dataset.sendUrl, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": body.get("csrfmiddlewaretoken"),
+                    "Accept": "application/json"
+                },
+                body
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                errorBox.textContent = data.error || Object.values(data.errors || {})
+                    .flatMap((errors) => errors.map((item) => item.message))
+                    .join(" ");
+                return;
+            }
+            input.value = "";
+            await poll();
+        } catch (error) {
+            errorBox.textContent = "Message could not be sent. Please try again.";
+        }
+    });
+
+    list.addEventListener("click", async (event) => {
+        const button = event.target.closest(".delete-message");
+        if (!button) return;
+        const token = form.elements.csrfmiddlewaretoken.value;
+        const response = await fetch(button.dataset.deleteUrl, {
+            method: "POST",
+            headers: { "X-CSRFToken": token, "Accept": "application/json" }
+        });
+        if (response.ok) {
+            const article = button.closest(".message");
+            article.querySelector(".message-content").textContent = "Message deleted";
+            button.remove();
+        }
+    });
+
+    list.scrollTop = list.scrollHeight;
+    window.setInterval(poll, 1000);
+})();
+</script>
+{% endblock %}

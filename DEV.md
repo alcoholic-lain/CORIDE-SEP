@@ -1,26 +1,24 @@
 # Developer guide
 
-This repository is a single Django project split into module apps. Run commands from the repository root in PowerShell.
+This repository is a Django project split into module apps. Run commands from the repository root in PowerShell.
 
 ## Setup and run
 
-Install the pinned dependencies and create/update the project environment:
+Install the locked dependencies:
 
 ```powershell
 uv sync
 ```
 
-Start the development server:
+Start Django:
 
 ```powershell
 uv run manage.py runserver
 ```
 
-Open `http://127.0.0.1:8000/`. Django reloads Python and template changes automatically while the server is running.
+Open `http://127.0.0.1:8000/`. Django reloads Python and template changes automatically.
 
 ## URL map
-
-Each module has its own URL prefix and URL configuration:
 
 | Area | URL | Django app |
 |---|---|---|
@@ -32,46 +30,47 @@ Each module has its own URL prefix and URL configuration:
 | Communication | `/coms/` | `communication` |
 | Django admin | `/admin/` | Django admin |
 
-Add a module route to that app's `urls.py`; project-level prefixes are wired in `config/urls.py`. Views belong in the app's `views.py`. The `CORIDE` app currently supplies the shared landing-page template, and shared static assets such as the kitty image live in `assets/`.
+Add routes in each app's `urls.py`; project-level prefixes are wired in `config/urls.py`. Views belong in the app's `views.py`. Shared landing-page templates are in `CORIDE/`, and shared static assets are in `assets/`.
 
-## Module specifications
+## Module documentation
 
-Each app's folder contains its module requirements and design notes:
+The apps are currently scaffolds with shared placeholder pages; their planned features remain to be implemented. Each app has a current-state log, specification and screenshot:
 
-- Users: [utilisateurs/01_user-management.md](utilisateurs/01_user-management.md)
-- Vehicles: [vehicules/02_vehicle-management.md](vehicules/02_vehicle-management.md)
-- Trips: [trajets/03_trip-management.md](trajets/03_trip-management.md)
-- Reservations: [reservations/04_reservation-management.md](reservations/04_reservation-management.md)
-- Communication and feedback: [communication/05_communication-feedback.md](communication/05_communication-feedback.md)
+| App | Current state | Specification | Screenshot |
+|---|---|---|---|
+| CoRide | [AI.log](CORIDE/AI.log) | — | [home](CORIDE/screenshots/home.png) |
+| Users | [AI.log](utilisateurs/AI.log) | [requirements](utilisateurs/01_user-management.md) | [preview](utilisateurs/screenshots/users.png) |
+| Vehicles | [AI.log](vehicules/AI.log) | [requirements](vehicules/02_vehicle-management.md) | [preview](vehicules/screenshots/vehicles.png) |
+| Trips | [AI.log](trajets/AI.log) | [requirements](trajets/03_trip-management.md) | [preview](trajets/screenshots/trips.png) |
+| Reservations | [AI.log](reservations/AI.log) | [requirements](reservations/04_reservation-management.md) | [preview](reservations/screenshots/reservations.png) |
+| Communication | [AI.log](communication/AI.log) | [requirements](communication/05_communication-feedback.md) | [preview](communication/screenshots/coms.png) |
 
 ## Common Django commands
 
-Run Django commands through `uv run` so they use the project's locked environment:
+Use `uv run` so each command uses the project's locked environment:
 
 ```powershell
-# Check settings, installed apps, and URL configuration
+# Check settings, installed apps and URL configuration
 uv run manage.py check
 
 # Create migration files after changing models
 uv run manage.py makemigrations
 
-# Apply migrations to the local database
+# Apply migrations
 uv run manage.py migrate
 
-# Run tests for all apps, or one app
+# Run all tests or only one app's tests
 uv run manage.py test
 uv run manage.py test trajets
 
-# Open the Django interactive shell
+# Open the Django shell or create an admin login
 uv run manage.py shell
-
-# Create an admin login
 uv run manage.py createsuperuser
 ```
 
-Commit migration files along with the model changes that generated them. Do not edit an already shared migration; create a new migration instead.
+Commit migration files with the model changes that generated them. Do not edit an already shared migration; create a new one instead.
 
-To scaffold another app:
+To scaffold an app:
 
 ```powershell
 uv run manage.py startapp my_app
@@ -79,22 +78,20 @@ uv run manage.py startapp my_app
 
 Then add its `AppConfig` to `INSTALLED_APPS` in `config/settings.py`, create `my_app/urls.py`, and include it under a prefix in `config/urls.py`.
 
+## Static files
+
+Shared assets such as `assets/kitty.png` are collected into `STATIC_ROOT` during a Vercel build and served from `STATIC_URL`. Keep `STATIC_ROOT` configured in `config/settings.py`, and reference assets in templates with `{% static %}`. Use Django for local development and testing.
+
 ## Repository workflow
 
-The shared integration branch is `master`. The module branches are `utilisateurs`, `vehicules`, `trajets`, `reservations`, and `communication`. Work on your module branch rather than directly on `master`. `CORIDE` contains shared landing-page/UI elements, so coordinate changes to it with the other developers and integrate them through a pull request to `master`.
+The shared integration branch is `master`. Module branches are `utilisateurs`, `vehicules`, `trajets`, `reservations` and `communication`. Work on your assigned branch and open a pull request to `master`; coordinate changes to shared settings, URLs or the `CORIDE` UI.
 
 ```powershell
-# See your current branch and uncommitted files
 git status
-
-# Get the latest remote branch list
 git fetch origin
-
-# Start work on your module branch
 git switch trajets
 git pull
 
-# After making and checking changes
 uv run manage.py check
 uv run manage.py test trajets
 git add trajets/
@@ -102,4 +99,4 @@ git commit -m "Describe the change"
 git push
 ```
 
-Replace `trajets` with your module branch. Stage only the files for your change (for example, `git add trajets/`) rather than using `git add .`, which can include unrelated work. Before switching branches, commit or otherwise safely preserve your changes. Keep commits focused, push to your module branch, and open a pull request to `master` so module work can be reviewed and integrated. If a change affects shared settings, URLs, or the shared `CORIDE` UI, coordinate with the other module developers.
+Replace `trajets` with your module branch. Stage only files related to your change rather than using `git add .`, which can include unrelated work.

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
@@ -35,6 +36,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 import java.net.Inet4Address
+import org.json.JSONObject
 
 class MainActivity : Activity() {
     private lateinit var nsdManager: NsdManager
@@ -250,10 +252,13 @@ class MainActivity : Activity() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     if (!isCurrentServerUrl(url)) return
                     updateCurrentPath(url)
-                    webView.visibility = View.VISIBLE
-                    loaderScreen.visibility = View.GONE
-                    offlineScreen.visibility = View.GONE
-                    navigationBar.visibility = View.VISIBLE
+                    applySystemThemeToPage {
+                        if (webView.url != url) return@applySystemThemeToPage
+                        webView.visibility = View.VISIBLE
+                        loaderScreen.visibility = View.GONE
+                        offlineScreen.visibility = View.GONE
+                        navigationBar.visibility = View.VISIBLE
+                    }
                 }
 
                 override fun onReceivedError(
@@ -296,6 +301,7 @@ class MainActivity : Activity() {
         }
         val navigationBarHeight = (56 * density).toInt()
         val root = FrameLayout(this).apply {
+            setBackgroundColor(getColor(R.color.app_surface))
             addView(
                 webView,
                 FrameLayout.LayoutParams(
@@ -656,7 +662,6 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(getColor(R.color.app_surface))
-            elevation = 4 * density
             visibility = View.GONE
             addView(
                 menuButton,
@@ -674,6 +679,55 @@ class MainActivity : Activity() {
                 ),
             )
         }
+    }
+
+    private fun applySystemThemeToPage(onApplied: () -> Unit) {
+        val isDark =
+            (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
+        val css = if (isDark) {
+            """
+                :root {
+                    color-scheme: dark !important;
+                    --coride-surface: #1c1f26;
+                    --coride-text: #f4f3ee;
+                    --coride-muted: #c0c7d0;
+                }
+                html, body {
+                    background: var(--coride-surface) !important;
+                    color: var(--coride-text) !important;
+                }
+                p { color: var(--coride-muted) !important; }
+                .mascot::before { color: rgb(244 243 238 / 8%) !important; }
+            """.trimIndent()
+        } else {
+            """
+                :root {
+                    color-scheme: light !important;
+                    --coride-surface: #f2f7f6;
+                    --coride-text: #172f46;
+                    --coride-muted: #60778a;
+                }
+                html, body {
+                    background: var(--coride-surface) !important;
+                    color: var(--coride-text) !important;
+                }
+                p { color: var(--coride-muted) !important; }
+                .mascot::before { color: rgb(23 47 70 / 8%) !important; }
+            """.trimIndent()
+        }
+        val script = """
+            (function() {
+                var style = document.getElementById('coride-android-theme');
+                if (!style) {
+                    style = document.createElement('style');
+                    style.id = 'coride-android-theme';
+                    (document.head || document.documentElement).appendChild(style);
+                }
+                style.textContent = ${JSONObject.quote(css)};
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(script) { onApplied() }
     }
 
     private fun createNavigationDrawer(density: Float): LinearLayout {

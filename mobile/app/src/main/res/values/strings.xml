@@ -16,5 +16,9 @@
     <string name="app_version">v%1$s</string>
     <string name="update_available">v%1$s · v%2$s available</string>
     <string name="view_update">View update</string>
+    <string name="update_prompt_title">New CoRide release</string>
+    <string name="update_prompt_message">Version %1$s is available. Open its GitHub release page?</string>
+    <string name="open_github_release">Open GitHub</string>
+    <string name="not_now">Not now</string>
     <string name="release_page_unavailable">No browser is available to open the CoRide release.</string>
 </resources>

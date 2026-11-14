@@ -1,6 +1,7 @@
 package com.coride.app
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -61,6 +62,7 @@ class MainActivity : Activity() {
     private var updateCheckInProgress = false
     private var offeredUpdateVersion: String? = null
     private var latestUpdate: GitHubReleaseUpdater.AvailableUpdate? = null
+    private val updatePreferences by lazy { getPreferences(Context.MODE_PRIVATE) }
     private val releaseUpdater by lazy { GitHubReleaseUpdater() }
     private val updateCheckTask = object : Runnable {
         override fun run() {
@@ -842,7 +844,7 @@ class MainActivity : Activity() {
             try {
                 val update = releaseUpdater.findUpdate(BuildConfig.VERSION_NAME)
                 mainHandler.post {
-                    if (isDestroyed) return@post
+                    if (isDestroyed || isFinishing) return@post
                     updateCheckInProgress = false
                     if (update == null || update.versionName == offeredUpdateVersion) return@post
                     offeredUpdateVersion = update.versionName
@@ -853,6 +855,7 @@ class MainActivity : Activity() {
                         update.versionName,
                     )
                     updateButton.visibility = View.VISIBLE
+                    promptToOpenReleasePage(update)
                 }
             } catch (error: IOException) {
                 Log.w(TAG, "Could not check GitHub for Android updates", error)
@@ -861,6 +864,26 @@ class MainActivity : Activity() {
                 }
             }
         }, "CoRide-release-check").start()
+    }
+
+    private fun promptToOpenReleasePage(update: GitHubReleaseUpdater.AvailableUpdate) {
+        if (
+            updatePreferences.getString(PROMPTED_UPDATE_VERSION_KEY, null) ==
+            update.versionName
+        ) {
+            return
+        }
+        updatePreferences.edit()
+            .putString(PROMPTED_UPDATE_VERSION_KEY, update.versionName)
+            .apply()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.update_prompt_title)
+            .setMessage(getString(R.string.update_prompt_message, update.versionName))
+            .setPositiveButton(R.string.open_github_release) { _, _ ->
+                openReleasePage(update.releaseUrl)
+            }
+            .setNegativeButton(R.string.not_now, null)
+            .show()
     }
 
     private fun openReleasePage(releaseUrl: String) {
@@ -875,6 +898,7 @@ class MainActivity : Activity() {
     private companion object {
         const val SERVICE_TYPE = "_coride._tcp."
         const val DISCOVERY_TIMEOUT_MS = 15_000L
+        const val PROMPTED_UPDATE_VERSION_KEY = "prompted_update_version"
         const val UPDATE_CHECK_INTERVAL_MS = 120_000L
         const val FALLBACK_URL = "https://coride-sep.vercel.app/"
         const val TAG = "CoRide"

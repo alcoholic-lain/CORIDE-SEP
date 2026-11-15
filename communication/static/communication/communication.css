@@ -745,6 +745,7 @@ p {
         ". reply"
         ". content"
         ". attachment"
+        ". reactions"
         ". actions";
     align-self: stretch;
     width: 100%;
@@ -928,6 +929,82 @@ p {
     display: none;
 }
 
+.message-reaction-row,
+.message-reactions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.message-reaction-row {
+    grid-area: reactions;
+    min-height: 0;
+    margin-top: 0.15rem;
+}
+
+.message-reaction-row[hidden] {
+    display: none;
+}
+
+.reaction-chip,
+.react-menu summary {
+    min-height: 26px;
+    padding: 0.15rem 0.45rem;
+    color: var(--ink);
+    background: var(--page);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.78rem;
+}
+
+.reaction-mine {
+    background: var(--soft-pink);
+    border-color: var(--pink);
+}
+
+.react-options {
+    position: absolute;
+    z-index: 5;
+    right: 0;
+    top: calc(100% + 0.35rem);
+    display: flex;
+    flex-wrap: wrap;
+    width: max-content;
+    max-width: min(300px, calc(100vw - 2rem));
+    gap: 0.2rem;
+    padding: 0.35rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.65rem;
+    box-shadow: var(--shadow);
+}
+
+.react-options button {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0.35rem;
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+
+.react-options button:hover,
+.react-options button:focus-visible,
+.reaction-chip:hover,
+.react-menu summary:hover {
+    border-color: var(--pink);
+}
+
+.react-options button:hover {
+    background: var(--soft-pink);
+}
+
 .message-toolbar {
     position: absolute;
     z-index: 3;
@@ -949,7 +1026,7 @@ p {
     transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
 }
 
-.message-toolbar .message-more {
+.message-toolbar details {
     position: relative;
 }
 
@@ -1007,7 +1084,30 @@ p {
     border-color: var(--pink);
 }
 
+.react-menu summary {
+    min-width: 44px;
+    opacity: 0;
+    font-size: 0.72rem;
+    list-style: none;
+    transition: opacity 120ms ease;
+}
+
+.react-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.message:hover .react-menu summary,
+.message:focus-within .react-menu summary,
+.react-menu[open] summary {
+    opacity: 1;
+}
+
 .message-more[open] .message-more-options {
+    z-index: 4;
+}
+
+.react-menu[open] .react-options,
+.emoji-picker[open] .emoji-options {
     z-index: 4;
 }
 
@@ -1164,7 +1264,7 @@ p {
     position: relative;
     display: grid;
     flex: 1;
-    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-columns: 34px minmax(0, 1fr) 44px;
     grid-template-rows: auto auto;
     align-items: center;
     min-width: 0;
@@ -1229,6 +1329,66 @@ p {
 .send-form textarea:focus {
     border: 0;
     box-shadow: none;
+}
+
+.emoji-picker {
+    position: relative;
+    grid-column: 3;
+    grid-row: 1;
+}
+
+.emoji-picker summary {
+    display: grid;
+    width: 44px;
+    height: 34px;
+    place-items: center;
+    color: var(--muted);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.68rem;
+    font-weight: 650;
+    list-style: none;
+}
+
+.emoji-picker summary:hover {
+    color: var(--coride);
+    background: var(--soft-pink);
+}
+
+.emoji-picker summary::-webkit-details-marker {
+    display: none;
+}
+
+.emoji-options {
+    position: absolute;
+    z-index: 5;
+    right: 0;
+    bottom: calc(100% + 0.5rem);
+    display: grid;
+    grid-template-columns: repeat(4, 36px);
+    gap: 0.2rem;
+    padding: 0.4rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.65rem;
+    box-shadow: var(--shadow);
+}
+
+.emoji-options button {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 0.4rem;
+    cursor: pointer;
+    font-size: 1.2rem;
+}
+
+.emoji-options button:hover,
+.emoji-options button:focus-visible {
+    background: var(--soft-pink);
 }
 
 .attachment-preview {
@@ -1556,6 +1716,11 @@ p {
         transform: none;
     }
 
+    .react-options {
+        right: auto;
+        left: 0;
+    }
+
     .invite-panel {
         grid-template-columns: 1fr;
         padding: 0.75rem 0.8rem;
@@ -1606,6 +1771,10 @@ p {
         visibility: visible;
         pointer-events: auto;
         transform: none;
+    }
+
+    .message .react-menu summary {
+        opacity: 1;
     }
 
 }

@@ -112,8 +112,16 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 def _get_database_config(environ, base_dir):
-    database_url = environ.get("TURSO_DATABASE_URL", "").strip()
-    auth_token = environ.get("TURSO_AUTH_TOKEN", "").strip()
+    uses_persistent_production_database = environ.get("VERCEL_ENV") == "production" and (
+        "CORIDE_TURSO_DATABASE_URL" in environ
+        or "CORIDE_TURSO_AUTH_TOKEN" in environ
+    )
+    if uses_persistent_production_database:
+        database_url = environ.get("CORIDE_TURSO_DATABASE_URL", "").strip()
+        auth_token = environ.get("CORIDE_TURSO_AUTH_TOKEN", "").strip()
+    else:
+        database_url = environ.get("TURSO_DATABASE_URL", "").strip()
+        auth_token = environ.get("TURSO_AUTH_TOKEN", "").strip()
 
     if database_url:
         try:
@@ -147,11 +155,13 @@ def _get_database_config(environ, base_dir):
 
     if auth_token:
         raise ImproperlyConfigured(
-            "TURSO_DATABASE_URL is required when TURSO_AUTH_TOKEN is set."
+            "The matching Turso database URL is required when its auth token is set."
         )
     if environ.get("VERCEL"):
         raise ImproperlyConfigured(
-            "Configure TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in Vercel."
+            "Configure stable CORIDE_TURSO_DATABASE_URL and "
+            "CORIDE_TURSO_AUTH_TOKEN for Production, or TURSO_DATABASE_URL and "
+            "TURSO_AUTH_TOKEN for other Vercel environments."
         )
 
     return {

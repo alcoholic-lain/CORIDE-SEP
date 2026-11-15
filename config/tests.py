@@ -71,6 +71,38 @@ class VercelSettingsTests(SimpleTestCase):
         self.assertEqual(database["NAME"], "libsql://example.turso.io")
         self.assertEqual(database["OPTIONS"], {"auth_token": "test-token"})
 
+    def test_production_uses_stable_turso_database_instead_of_deployment_branch(self):
+        database = _get_database_config(
+            {
+                "VERCEL": "1",
+                "VERCEL_ENV": "production",
+                "TURSO_DATABASE_URL": "libsql://deployment-branch.turso.io",
+                "TURSO_AUTH_TOKEN": "deployment-token",
+                "CORIDE_TURSO_DATABASE_URL": "libsql://stable.turso.io",
+                "CORIDE_TURSO_AUTH_TOKEN": "stable-token",
+            },
+            Path("/project"),
+        )
+
+        self.assertEqual(database["NAME"], "libsql://stable.turso.io")
+        self.assertEqual(database["OPTIONS"], {"auth_token": "stable-token"})
+
+    def test_non_production_vercel_keeps_its_turso_deployment_branch(self):
+        database = _get_database_config(
+            {
+                "VERCEL": "1",
+                "VERCEL_ENV": "preview",
+                "TURSO_DATABASE_URL": "libsql://preview-branch.turso.io",
+                "TURSO_AUTH_TOKEN": "preview-token",
+                "CORIDE_TURSO_DATABASE_URL": "libsql://stable.turso.io",
+                "CORIDE_TURSO_AUTH_TOKEN": "stable-token",
+            },
+            Path("/project"),
+        )
+
+        self.assertEqual(database["NAME"], "libsql://preview-branch.turso.io")
+        self.assertEqual(database["OPTIONS"], {"auth_token": "preview-token"})
+
     def test_remote_turso_database_requires_auth_token(self):
         with self.assertRaises(ImproperlyConfigured):
             _get_database_config(

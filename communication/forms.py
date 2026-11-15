@@ -2,7 +2,7 @@ from pathlib import Path
 
 from django import forms
 
-from .models import Message, Review
+from .models import CommunicationParticipant, Message, Review
 from .moderation import is_blocked
 
 
@@ -30,6 +30,12 @@ class GuestNameForm(forms.Form):
 
 
 class NewConversationForm(forms.Form):
+    guests = forms.ModelMultipleChoiceField(
+        queryset=CommunicationParticipant.objects.none(),
+        required=False,
+        label="Add guests",
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "guest-choice-list"}),
+    )
     title = forms.CharField(
         max_length=120,
         required=False,
@@ -46,10 +52,34 @@ class NewConversationForm(forms.Form):
             attrs={
                 "rows": 4,
                 "maxlength": 1000,
-                "placeholder": "Add a message before you share the invite.",
+                "placeholder": "Start the conversation with a message.",
             }
         ),
     )
+
+    def __init__(self, *args, participant, **kwargs):
+        super().__init__(*args, **kwargs)
+        candidates = (
+            CommunicationParticipant.objects.filter(
+                user__isnull=True,
+            )
+            .exclude(display_name="")
+            .order_by("-last_seen_at", "display_name", "pk")
+        )
+        seen_names = (
+            {participant.display_name.casefold()}
+            if participant.is_guest and participant.display_name
+            else set()
+        )
+        guest_ids = []
+        for candidate in candidates:
+            normalized_name = candidate.display_name.casefold()
+            if normalized_name not in seen_names:
+                guest_ids.append(candidate.pk)
+                seen_names.add(normalized_name)
+        self.fields["guests"].queryset = CommunicationParticipant.objects.filter(
+            pk__in=guest_ids
+        ).order_by("display_name", "pk")
 
     def clean_title(self):
         return self.cleaned_data["title"].strip() or "New conversation"

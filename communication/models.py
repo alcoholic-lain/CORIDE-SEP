@@ -113,6 +113,12 @@ class Conversation(models.Model):
         blank=True,
         related_name="conversations_as_second",
     )
+    participants = models.ManyToManyField(
+        CommunicationParticipant,
+        through="ConversationMembership",
+        related_name="conversations",
+        blank=True,
+    )
     title = models.CharField(max_length=120, blank=True, default="")
     invite_code = models.CharField(
         max_length=40,
@@ -159,15 +165,24 @@ class Conversation(models.Model):
 
     def includes(self, participant):
         participant_ids = (self.participant_one_id, self.participant_two_id)
-        if participant.pk is not None and participant.pk in participant_ids:
+        if participant.pk is not None and (
+            participant.pk in participant_ids
+            or self.participants.filter(pk=participant.pk).exists()
+        ):
             return True
         if not participant.is_guest or not participant.display_name:
             return False
-        return CommunicationParticipant.objects.filter(
-            pk__in=participant_ids,
-            user__isnull=True,
-            display_name__iexact=participant.display_name,
-        ).exists()
+        return (
+            self.participants.filter(
+                user__isnull=True,
+                display_name__iexact=participant.display_name,
+            ).exists()
+            or CommunicationParticipant.objects.filter(
+                pk__in=participant_ids,
+                user__isnull=True,
+                display_name__iexact=participant.display_name,
+            ).exists()
+        )
 
     def clean(self):
         if self.passenger_id and self.passenger_id == self.driver_id:
@@ -185,6 +200,28 @@ class Conversation(models.Model):
             self.closed_at = timezone.now()
             self.close_reason = reason
             self.save(update_fields=["closed_at", "close_reason"])
+
+
+class ConversationMembership(models.Model):
+    conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE,
+        related_name="memberships",
+    )
+    participant = models.ForeignKey(
+        CommunicationParticipant,
+        on_delete=models.CASCADE,
+        related_name="conversation_memberships",
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["conversation", "participant"],
+                name="communication_unique_conversation_member",
+            ),
+        ]
 
 
 class Message(models.Model):
@@ -273,6 +310,28 @@ class Message(models.Model):
             errors["reply_to"] = "Replies must be in the same conversation."
         if errors:
             raise ValidationError(errors)
+
+
+class MessageRead(models.Model):
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.CASCADE,
+        related_name="read_receipts",
+    )
+    participant = models.ForeignKey(
+        CommunicationParticipant,
+        on_delete=models.CASCADE,
+        related_name="message_reads",
+    )
+    read_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["message", "participant"],
+                name="communication_unique_message_reader",
+            ),
+        ]
 
 
 class ConversationTypingStatus(models.Model):

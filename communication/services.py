@@ -52,6 +52,7 @@ def open_conversation(
         raise ValidationError(
             "Reservation reference is already linked to a different conversation."
         )
+    conversation.participants.add(passenger_participant, driver_participant)
     return conversation
 
 

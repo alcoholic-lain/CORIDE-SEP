@@ -32,28 +32,28 @@
         {% for conversation in conversations %}
             <a class="conversation-card" href="{% url 'communication:conversation_detail' conversation.id %}">
                 <span class="avatar" aria-hidden="true">
-                    {% if conversation.participant_one_id == participant.id %}
-                        {{ conversation.participant_two.display_label|default:"+"|first|upper }}
-                    {% else %}
-                        {{ conversation.participant_one.display_label|first|upper }}
-                    {% endif %}
+                    {% with first_other=conversation.other_participants.0 %}
+                        {{ first_other.display_label|default:"+"|first|upper }}
+                    {% endwith %}
                 </span>
                 <div class="conversation-copy">
                     <h2>
                         {% if conversation.title %}
                             {{ conversation.title }}
-                        {% elif conversation.participant_one_id == participant.id %}
-                            {{ conversation.participant_two.display_label|default:"New conversation" }}
                         {% else %}
-                            {{ conversation.participant_one.display_label }}
+                            {% for other in conversation.other_participants %}
+                                {{ other.display_label }}{% if not forloop.last %}, {% endif %}
+                            {% empty %}
+                                New conversation
+                            {% endfor %}
                         {% endif %}
                     </h2>
                     <p>
-                        {% if conversation.participant_one_id == participant.id %}
-                            {% if conversation.participant_two %}{{ conversation.participant_two.display_label }}{% else %}Waiting for someone to join{% endif %}
-                        {% else %}
-                            {{ conversation.participant_one.display_label }}
-                        {% endif %}
+                        {% for other in conversation.other_participants %}
+                            {{ other.display_label }}{% if not forloop.last %}, {% endif %}
+                        {% empty %}
+                            Waiting for someone to join
+                        {% endfor %}
                         {% if conversation.trip_reference %} · Trip {{ conversation.trip_reference }}{% endif %}
                     </p>
                 </div>
@@ -75,7 +75,7 @@
             <a class="button" href="{% url 'communication:conversation_list' %}">Clear search</a>
         {% else %}
             <h2>Your inbox is ready</h2>
-            <p>Create a private chat and invite someone with a secure share link. You can start messaging before they join.</p>
+            <p>Create a group chat with guests already on CoRide, or invite someone with a secure share link.</p>
             <a class="button" href="{% url 'communication:create_conversation' %}">Start a conversation</a>
         {% endif %}
     </section>

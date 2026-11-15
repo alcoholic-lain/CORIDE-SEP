@@ -24,8 +24,8 @@
                     </h1>
                     <p>
                         <span id="other-participant-name">
-                            {% if other_participant %}
-                                {{ other_participant.display_label }}
+                            {% if other_participant_names %}
+                                {{ other_participant_names }}
                             {% else %}
                                 Waiting for someone to join
                             {% endif %}
@@ -34,7 +34,7 @@
                     </p>
                     <p class="participant-presence">
                         <span id="participant-presence-dot" class="presence-dot{% if other_online %} presence-online{% endif %}"></span>
-                        <span id="participant-presence">{% if other_online %}Online{% else %}Offline{% endif %}</span>
+                        <span id="participant-presence">{% if is_group_chat %}{{ other_online_count }} online{% else %}{% if other_online %}Online{% else %}Offline{% endif %}{% endif %}</span>
                     </p>
                 </div>
             </div>
@@ -237,6 +237,8 @@
     <p id="send-error" class="form-error" aria-live="polite"></p>
     {% if conversation.departure_at %}
         <p class="chat-footnote">Private trip chat · closes 24 hours after departure.</p>
+    {% elif is_group_chat %}
+        <p class="chat-footnote">Private group chat · messages are visible to all {{ participant_count }} participants.</p>
     {% else %}
         <p class="chat-footnote">Private chat · messages are visible only to the two participants.</p>
     {% endif %}
@@ -769,7 +771,9 @@
                 otherName.textContent = data.other_participant;
             }
             if (presenceLabel && presenceDot) {
-                presenceLabel.textContent = data.other_online ? "Online" : "Offline";
+                presenceLabel.textContent = data.other_participants_count > 1
+                    ? `${data.other_online_count} online`
+                    : data.other_online ? "Online" : "Offline";
                 presenceDot.classList.toggle("presence-online", data.other_online);
             }
             typingIndicator.hidden = !data.typing;

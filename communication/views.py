@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, Exists, OuterRef, Q
 from django.db.models.functions import Coalesce
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -32,8 +32,10 @@ from .identity import (
 from .models import (
     CommunicationParticipant,
     Conversation,
+    ConversationMembership,
     ConversationTypingStatus,
     Message,
+    MessageRead,
     MessageReaction,
     Review,
 )
@@ -87,6 +89,20 @@ def _reaction_summaries(reactions, participant):
             }
         )
     return summaries
+
+
+def _unread_messages(conversation, participant):
+    read_receipts = MessageRead.objects.filter(
+        participant_identity_q("participant", participant),
+        message_id=OuterRef("pk"),
+    )
+    return (
+        conversation.messages.exclude(
+            participant_identity_q("sender_participant", participant)
+        )
+        .annotate(read_by_participant=Exists(read_receipts))
+        .filter(read_by_participant=False)
+    )
 
 
 def _message_attachment(message):
@@ -214,20 +230,33 @@ def conversation_list(request):
         return response
 
     query = request.GET.get("q", "").strip()[:120]
+    if participant.is_guest:
+        member_identity = Q(
+            participants__user__isnull=True,
+            participants__display_name__iexact=participant.display_name,
+        )
+    else:
+        member_identity = Q(participants__pk=participant.pk)
+    read_receipts = MessageRead.objects.filter(
+        participant_identity_q("participant", participant),
+        message_id=OuterRef("messages__pk"),
+    )
     conversations = (
         Conversation.objects.filter(
             participant_identity_q("participant_one", participant)
             | participant_identity_q("participant_two", participant)
+            | member_identity
         )
         .select_related("participant_one", "participant_two")
+        .prefetch_related("participants")
         .annotate(
             unread_count=Count(
                 "messages",
-                filter=Q(messages__read_at__isnull=True)
-                & ~participant_identity_q(
+                filter=~participant_identity_q(
                     "messages__sender_participant",
                     participant,
-                ),
+                )
+                & ~Exists(read_receipts),
                 distinct=True,
             )
         )
@@ -235,6 +264,10 @@ def conversation_list(request):
     if query:
         conversations = conversations.filter(
             Q(title__icontains=query)
+            | Q(participants__display_name__icontains=query)
+            | Q(participants__user__username__icontains=query)
+            | Q(participants__user__first_name__icontains=query)
+            | Q(participants__user__last_name__icontains=query)
             | Q(participant_one__display_name__icontains=query)
             | Q(participant_two__display_name__icontains=query)
             | Q(participant_one__user__username__icontains=query)
@@ -245,6 +278,20 @@ def conversation_list(request):
             | Q(participant_two__user__last_name__icontains=query)
         )
     conversations = conversations.distinct()
+    for conversation in conversations:
+        members = list(conversation.participants.all())
+        if not members:
+            members = [conversation.participant_one]
+            if conversation.participant_two_id is not None:
+                members.append(conversation.participant_two)
+        other_participants = []
+        for member in members:
+            if member.matches_identity(participant) or any(
+                member.matches_identity(existing) for existing in other_participants
+            ):
+                continue
+            other_participants.append(member)
+        conversation.other_participants = other_participants
     return render(
         request,
         "communication/conversation_list.html",
@@ -261,14 +308,17 @@ def create_conversation(request):
     if response:
         return response
 
-    form = NewConversationForm(request.POST or None)
+    form = NewConversationForm(request.POST or None, participant=participant)
     if request.method == "POST" and form.is_valid():
+        guests = list(form.cleaned_data["guests"])
         with transaction.atomic():
             conversation = Conversation.objects.create(
                 participant_one=participant,
+                participant_two=guests[0] if guests else None,
                 passenger=participant.user,
                 title=form.cleaned_data["title"],
             )
+            conversation.participants.add(participant, *guests)
             initial_message = form.cleaned_data["initial_message"]
             if initial_message:
                 create_message(
@@ -284,7 +334,11 @@ def create_conversation(request):
     return render(
         request,
         "communication/new_conversation.html",
-        {"form": form, "participant": participant},
+        {
+            "form": form,
+            "guest_options": form.fields["guests"].queryset,
+            "participant": participant,
+        },
     )
 
 
@@ -325,6 +379,10 @@ def join_conversation(request, invite_code):
                             driver_id=participant.user_id,
                         )
                         if joined:
+                            ConversationMembership.objects.get_or_create(
+                                conversation_id=conversation.pk,
+                                participant=participant,
+                            )
                             return redirect(
                                 "communication:conversation_detail",
                                 conversation_id=conversation.pk,
@@ -360,6 +418,9 @@ def join_conversation(request, invite_code):
             "guest_mode_enabled": guest_mode_enabled(),
             "join_error": join_error,
             "name_form": name_form,
+            "already_participant": (
+                conversation.includes(participant) if participant is not None else False
+            ),
             "participant": participant,
         },
     )
@@ -375,7 +436,7 @@ def _conversation_for_participant(request, conversation_id):
             "participant_two",
             "passenger",
             "driver",
-        ),
+        ).prefetch_related("participants"),
         pk=conversation_id,
     )
     if not conversation.includes(participant):
@@ -390,10 +451,20 @@ def _conversation_for_participant(request, conversation_id):
     return conversation, participant, None
 
 
-def _other_participant(conversation, participant):
-    if conversation.participant_one.matches_identity(participant):
-        return conversation.participant_two
-    return conversation.participant_one
+def _other_participants(conversation, participant):
+    members = list(conversation.participants.all())
+    if not members:
+        members = [conversation.participant_one]
+        if conversation.participant_two_id is not None:
+            members.append(conversation.participant_two)
+    other_participants = []
+    for member in members:
+        if member.matches_identity(participant) or any(
+            member.matches_identity(existing) for existing in other_participants
+        ):
+            continue
+        other_participants.append(member)
+    return other_participants
 
 
 def conversation_detail(request, conversation_id):
@@ -404,12 +475,21 @@ def conversation_detail(request, conversation_id):
     if response:
         return response
 
-    Message.objects.filter(
-        conversation=conversation,
-        read_at__isnull=True,
-    ).exclude(
-        participant_identity_q("sender_participant", participant)
-    ).update(read_at=timezone.now())
+    now = timezone.now()
+    unread_ids = list(
+        _unread_messages(conversation, participant).values_list("pk", flat=True)
+    )
+    if unread_ids:
+        MessageRead.objects.bulk_create(
+            [
+                MessageRead(message_id=message_id, participant=participant)
+                for message_id in unread_ids
+            ],
+            ignore_conflicts=True,
+        )
+        Message.objects.filter(pk__in=unread_ids, read_at__isnull=True).update(
+            read_at=now
+        )
     messages = list(
         conversation.messages.select_related(
             "sender_participant",
@@ -440,7 +520,8 @@ def conversation_detail(request, conversation_id):
             )
         )
 
-    other_participant = _other_participant(conversation, participant)
+    other_participants = _other_participants(conversation, participant)
+    other_participant = next(iter(other_participants), None)
     return render(
         request,
         "communication/conversation_detail.html",
@@ -450,7 +531,18 @@ def conversation_detail(request, conversation_id):
             "message_form": message_form,
             "participant": participant,
             "other_participant": other_participant,
-            "other_online": _is_online(other_participant),
+            "other_participants": other_participants,
+            "other_participant_names": ", ".join(
+                member.display_label for member in other_participants
+            ),
+            "other_online": any(
+                _is_online(member) for member in other_participants
+            ),
+            "other_online_count": sum(
+                _is_online(member) for member in other_participants
+            ),
+            "is_group_chat": len(other_participants) > 1,
+            "participant_count": len(other_participants) + 1,
             "invite_url": invite_url,
             "latest_message_id": messages[-1].pk if messages else 0,
             "reaction_choices": MessageReaction.Emoji.choices,
@@ -485,14 +577,22 @@ def poll_messages(request, conversation_id):
         )
         .order_by("pk")[:100]
     )
-    unread_ids = [
-        message.pk
-        for message in messages
-        if not message.sender_participant.matches_identity(participant)
-        and message.read_at is None
-    ]
+    unread_ids = list(
+        _unread_messages(conversation, participant)
+        .filter(pk__in=[message.pk for message in messages])
+        .values_list("pk", flat=True)
+    )
     if unread_ids:
-        Message.objects.filter(pk__in=unread_ids).update(read_at=timezone.now())
+        MessageRead.objects.bulk_create(
+            [
+                MessageRead(message_id=message_id, participant=participant)
+                for message_id in unread_ids
+            ],
+            ignore_conflicts=True,
+        )
+        Message.objects.filter(pk__in=unread_ids, read_at__isnull=True).update(
+            read_at=timezone.now()
+        )
 
     read_ids = list(
         conversation.messages.filter(
@@ -502,7 +602,7 @@ def poll_messages(request, conversation_id):
         .order_by("-pk")
         .values_list("pk", flat=True)[:100]
     )
-    other_participant = _other_participant(conversation, participant)
+    other_participants = _other_participants(conversation, participant)
     typing_status = (
         ConversationTypingStatus.objects.filter(
             conversation=conversation,
@@ -536,11 +636,19 @@ def poll_messages(request, conversation_id):
             "typing": (
                 typing_status.participant.display_label if typing_status else None
             ),
-            "other_participant": (
-                other_participant.display_label if other_participant else None
+            "other_participant": ", ".join(
+                member.display_label for member in other_participants
+            )
+            or None,
+            "other_online": any(
+                _is_online(member) for member in other_participants
             ),
-            "other_online": _is_online(other_participant),
-            "has_second_participant": conversation.participant_two_id is not None,
+            "other_online_count": sum(
+                _is_online(member) for member in other_participants
+            ),
+            "other_participants_count": len(other_participants),
+            "participant_count": len(other_participants) + 1,
+            "has_second_participant": len(other_participants) > 0,
             "read_ids": read_ids,
             "reactions": {
                 str(message_id): summaries

@@ -222,6 +222,43 @@ button.button {
     grid-column: 1 / -1;
 }
 
+.guest-picker {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.guest-picker label {
+    font-weight: 700;
+}
+
+.guest-choice-list {
+    display: grid;
+    gap: 0.35rem;
+    max-height: 250px;
+    margin: 0;
+    padding: 0.65rem;
+    overflow-y: auto;
+    list-style: none;
+    border: 1px solid #d4d0cc;
+    border-radius: 0.7rem;
+    background: var(--surface);
+}
+
+.guest-choice-list li label {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.35rem;
+    cursor: pointer;
+}
+
+.guest-choice-list input[type="checkbox"] {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    accent-color: var(--coride);
+}
+
 .guest-start + .muted {
     font-size: 0.85rem;
 }

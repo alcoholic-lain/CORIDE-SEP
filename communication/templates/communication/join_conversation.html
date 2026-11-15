@@ -9,12 +9,12 @@
     <p class="muted">You have been invited to join a private chat.</p>
     {% if join_error %}<p class="form-error" role="alert">{{ join_error }}</p>{% endif %}
     {% if participant %}
-        {% if conversation.is_open and conversation.participant_two_id is None and conversation.participant_one_id != participant.id %}
+        {% if conversation.is_open and conversation.participant_two_id is None and not already_participant %}
             <form method="post">
                 {% csrf_token %}
                 <button class="button" type="submit">Join conversation</button>
             </form>
-        {% elif conversation.participant_one_id == participant.id or conversation.participant_two_id == participant.id %}
+        {% elif already_participant %}
             <a class="button" href="{% url 'communication:conversation_detail' conversation.id %}">Open chat</a>
         {% endif %}
     {% elif guest_mode_enabled %}

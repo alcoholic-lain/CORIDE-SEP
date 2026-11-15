@@ -5,12 +5,25 @@
 {% block content %}
 <section class="form-card">
     <a class="back-link" href="{% url 'communication:conversation_list' %}">← Back to chats</a>
-    <p class="eyebrow">START A PRIVATE CHAT</p>
+    <p class="eyebrow">START A GROUP CHAT</p>
     <h1>Who do you want to message?</h1>
-    <p class="muted">Create a room, send the first message, then share the invite link with one person.</p>
+    <p class="muted">Choose guests already on CoRide to add now, or leave the list empty and share a private invite link.</p>
     <form method="post">
         {% csrf_token %}
         {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
+        {% if guest_options %}
+            <div class="guest-picker">
+                <label for="guest-picker-search">Choose guests</label>
+                <input id="guest-picker-search" type="search" placeholder="Search guest names" autocomplete="off">
+                <p class="muted">Selected guests can see the full conversation, including its first message.</p>
+                {{ form.guests }}
+                <p id="guest-picker-empty" class="muted" hidden>No guests match your search.</p>
+                <p id="guest-picker-count" class="muted" aria-live="polite">No guests selected.</p>
+            </div>
+        {% else %}
+            <p class="muted">No other guest profiles are available yet. You can share an invite link after creating the chat.</p>
+        {% endif %}
+        {{ form.guests.errors }}
         <label for="{{ form.title.id_for_label }}">Chat name</label>
         {{ form.title }}
         {{ form.title.errors }}
@@ -20,4 +33,38 @@
         <button class="button" type="submit">Create chat</button>
     </form>
 </section>
+{% if guest_options %}
+<script>
+    (() => {
+        const search = document.getElementById("guest-picker-search");
+        const list = document.querySelector(".guest-choice-list");
+        const empty = document.getElementById("guest-picker-empty");
+        const count = document.getElementById("guest-picker-count");
+        if (!search || !list || !empty || !count) return;
+
+        const options = Array.from(list.querySelectorAll("li"));
+        const updateSearch = () => {
+            const query = search.value.trim().toLocaleLowerCase();
+            let visible = 0;
+            options.forEach((option) => {
+                const matches = option.textContent.toLocaleLowerCase().includes(query);
+                option.hidden = !matches;
+                if (matches) visible += 1;
+            });
+            empty.hidden = visible > 0;
+        };
+        const updateCount = () => {
+            const selected = list.querySelectorAll("input[type=checkbox]:checked").length;
+            count.textContent = selected
+                ? `${selected} guest${selected === 1 ? "" : "s"} selected.`
+                : "No guests selected.";
+        };
+
+        search.addEventListener("input", updateSearch);
+        list.addEventListener("change", updateCount);
+        updateSearch();
+        updateCount();
+    })();
+</script>
+{% endif %}
 {% endblock %}

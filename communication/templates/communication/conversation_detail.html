@@ -141,7 +141,7 @@
                         </a>
                     </div>
                 {% endif %}
-                <div class="message-reaction-row" data-reactions-for="{{ message.id }}">
+                <div class="message-reaction-row" data-reactions-for="{{ message.id }}"{% if not message.reaction_summaries %} hidden{% endif %}>
                     <div class="message-reactions">
                         {% for reaction in message.reaction_summaries %}
                             <button
@@ -300,6 +300,8 @@
     function renderReactions(article, reactions) {
         const container = article.querySelector(".message-reactions");
         if (!container) return;
+        const row = container.closest(".message-reaction-row");
+        if (row) row.hidden = reactions.length === 0;
         const signature = reactions
             .map((reaction) => `${reaction.emoji}:${reaction.count}:${reaction.reacted}`)
             .join("|");

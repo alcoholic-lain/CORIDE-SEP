@@ -92,6 +92,10 @@ The app uses local SQLite unless `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are
 
 For local development, the default remains `db.sqlite3`. To connect locally to Turso, create `.env.local` at the repository root with only the `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` values, omitting Vercel's `VERCEL` flag. The file is ignored by Git and loaded by `manage.py` for non-test commands. Vercel may not allow secret values to be pulled into that file; replace any `[SENSITIVE]` placeholders with a newly rotated token before using it. Run `uv run manage.py migrate` only after verifying which database the environment points to.
 
+### Private chat attachments on Vercel
+
+Chat attachments use a **Private** Vercel Blob store so only authorized conversation participants can download them through Django. Connect the store to the project’s Production, Preview, and Development environments; Vercel supplies `BLOB_STORE_ID` and OIDC credentials. For local imports and development, run `npx vercel@latest env pull .env.local` after connecting Development. Never paste or commit the token values. Local development without Blob credentials continues to use the ignored `media/` directory.
+
 ### Test on a phone over the same LAN
 
 1. Connect the phone and development computer to the same trusted Wi-Fi/LAN.

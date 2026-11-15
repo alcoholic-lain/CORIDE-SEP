@@ -1,13 +1,18 @@
+from types import SimpleNamespace
 from pathlib import Path
+from unittest.mock import patch
 
 from django.core.exceptions import ImproperlyConfigured
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase
 
+from config.blob_storage import PrivateVercelBlobStorage
 from config.settings import (
     _get_allowed_hosts,
     _get_database_config,
     _get_debug,
     _get_secret_key,
+    _get_storages,
 )
 
 
@@ -86,3 +91,62 @@ class VercelSettingsTests(SimpleTestCase):
     def test_vercel_requires_remote_turso_credentials(self):
         with self.assertRaises(ImproperlyConfigured):
             _get_database_config({"VERCEL": "1"}, Path("/project"))
+
+    def test_local_file_storage_remains_the_default(self):
+        storages = _get_storages({})
+
+        self.assertEqual(
+            storages["default"]["BACKEND"],
+            "django.core.files.storage.FileSystemStorage",
+        )
+
+    def test_blob_storage_uses_oidc_store_credentials(self):
+        storages = _get_storages(
+            {"BLOB_STORE_ID": "store-id", "VERCEL_OIDC_TOKEN": "short-lived-token"}
+        )
+
+        self.assertEqual(
+            storages["default"]["BACKEND"],
+            "config.blob_storage.PrivateVercelBlobStorage",
+        )
+
+    def test_vercel_requires_persistent_blob_credentials(self):
+        with self.assertRaises(ImproperlyConfigured):
+            _get_storages({"VERCEL": "1"})
+
+
+class PrivateVercelBlobStorageTests(SimpleTestCase):
+    @patch("config.blob_storage.blob.put_blob")
+    def test_save_uploads_to_private_storage(self, put_blob):
+        name = "communication/attachments/image.png"
+        content = SimpleUploadedFile(
+            "image.png",
+            b"image bytes",
+            content_type="image/png",
+        )
+        content.validated_content_type = "image/png"
+        put_blob.return_value = SimpleNamespace(pathname=name)
+
+        saved_name = PrivateVercelBlobStorage()._save(name, content)
+
+        self.assertEqual(saved_name, name)
+        args, kwargs = put_blob.call_args
+        self.assertEqual(args[0], name)
+        self.assertEqual(b"".join(args[1]), b"image bytes")
+        self.assertEqual(kwargs["access"], "private")
+        self.assertEqual(kwargs["content_length"], len(b"image bytes"))
+        self.assertEqual(kwargs["content_type"], "image/png")
+
+    @patch("config.blob_storage.blob.get_blob")
+    def test_open_downloads_private_blob_content(self, get_blob):
+        get_blob.return_value = SimpleNamespace(body=b"image bytes")
+
+        with PrivateVercelBlobStorage()._open(
+            "communication/attachments/image.png"
+        ) as attachment:
+            self.assertEqual(attachment.read(), b"image bytes")
+
+        get_blob.assert_called_once_with(
+            "communication/attachments/image.png",
+            access="private",
+        )

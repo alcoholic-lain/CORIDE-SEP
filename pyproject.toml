@@ -11,6 +11,7 @@ dependencies = [
     "django>=5.2,<5.3",
     "python-dotenv>=1.2.4",
     "turso-serverless==0.1.0",
+    "vercel-blob>=0.5.0",
     "zeroconf>=0.154.0",
 ]
 

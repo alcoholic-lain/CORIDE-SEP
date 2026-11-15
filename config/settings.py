@@ -160,6 +160,35 @@ def _get_database_config(environ, base_dir):
     }
 
 
+def _get_storages(environ):
+    has_read_write_token = bool(
+        environ.get("BLOB_READ_WRITE_TOKEN")
+        or environ.get("VERCEL_BLOB_READ_WRITE_TOKEN")
+    )
+    has_oidc_credentials = bool(
+        environ.get("BLOB_STORE_ID")
+        and (environ.get("VERCEL_OIDC_TOKEN") or environ.get("VERCEL"))
+    )
+    uses_blob = has_read_write_token or has_oidc_credentials
+
+    if environ.get("VERCEL") and not uses_blob:
+        raise ImproperlyConfigured(
+            "Configure a private Vercel Blob store for persistent file storage."
+        )
+
+    default_backend = (
+        "config.blob_storage.PrivateVercelBlobStorage"
+        if uses_blob
+        else "django.core.files.storage.FileSystemStorage"
+    )
+    return {
+        "default": {"BACKEND": default_backend},
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
+
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
@@ -205,6 +234,7 @@ STATICFILES_DIRS = [BASE_DIR / 'assets']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+STORAGES = _get_storages(os.environ)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

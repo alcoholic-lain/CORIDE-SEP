@@ -662,9 +662,76 @@ class GuestConversationTests(TestCase):
             )
         )
         self.assertEqual(response.status_code, 403)
+        response = outsider.get(reverse("communication:conversation_list"))
+        self.assertEqual(list(response.context["conversations"]), [])
 
         response = outsider.get(join_url)
         self.assertContains(response, "already has two participants")
+
+    def test_guest_name_reconnects_to_all_chats_with_the_same_name(self):
+        first_nour = CommunicationParticipant.objects.create(
+            session_key="first-nour-session",
+            display_name="Nour",
+        )
+        second_nour = CommunicationParticipant.objects.create(
+            session_key="second-nour-session",
+            display_name="nour",
+        )
+        lain = CommunicationParticipant.objects.create(
+            session_key="lain-session",
+            display_name="Lain",
+        )
+        lamya = CommunicationParticipant.objects.create(
+            session_key="lamya-session",
+            display_name="Lamya",
+        )
+        lain_chat = Conversation.objects.create(
+            participant_one=first_nour,
+            participant_two=lain,
+            title="Lain",
+        )
+        test_chat = Conversation.objects.create(
+            participant_one=lamya,
+            participant_two=second_nour,
+            title="Test",
+        )
+        old_message = Message.objects.create(
+            conversation=lain_chat,
+            sender_participant=first_nour,
+            content="Old message from Nour",
+        )
+        self.start_guest(self.owner, "nour")
+        current_nour = CommunicationParticipant.objects.get(
+            session_key=self.owner.session.session_key
+        )
+
+        response = self.owner.get(reverse("communication:conversation_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {chat.pk for chat in response.context["conversations"]},
+            {lain_chat.pk, test_chat.pk},
+        )
+        response = self.owner.get(
+            reverse("communication:conversation_detail", args=[lain_chat.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Old message from Nour")
+        self.assertContains(response, 'class="message message-mine"')
+        self.assertEqual(response.context["chat_messages"][0].pk, old_message.pk)
+        self.assertTrue(response.context["chat_messages"][0].is_mine)
+        self.assertEqual(response.context["other_participant"], lain)
+
+        response = self.owner.post(
+            reverse("communication:send_message", args=[lain_chat.pk]),
+            {"content": "Nour is back"},
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.json()["is_mine"])
+        self.assertEqual(
+            Message.objects.get(content="Nour is back").sender_participant,
+            current_nour,
+        )
 
     @override_settings(COMMUNICATION_GUEST_MODE=False)
     def test_guest_mode_can_be_disabled(self):

@@ -27,6 +27,7 @@ from .identity import (
     create_guest_participant,
     get_request_participant,
     guest_mode_enabled,
+    participant_identity_q,
 )
 from .models import (
     CommunicationParticipant,
@@ -69,7 +70,10 @@ def _reaction_summaries(reactions, participant):
         reactions.values("message_id", "emoji")
         .annotate(
             count=Count("pk"),
-            mine=Count("pk", filter=Q(participant=participant)),
+            mine=Count(
+                "pk",
+                filter=participant_identity_q("participant", participant),
+            ),
         )
         .order_by("message_id", "emoji")
     )
@@ -114,11 +118,12 @@ def _reply_summary(message):
 
 
 def _message_payload(message, participant):
+    is_mine = message.sender_participant.matches_identity(participant)
     return {
         "id": message.pk,
         "sender": message.sender_participant.display_label,
         "sender_id": message.sender_participant_id,
-        "is_mine": message.sender_participant_id == participant.pk,
+        "is_mine": is_mine,
         "content": "Message deleted" if message.is_deleted else message.content,
         "deleted": message.is_deleted,
         "sent_at": message.sent_at.isoformat(),
@@ -130,13 +135,13 @@ def _message_payload(message, participant):
             "communication:message_delete",
             args=[message.pk],
         )
-        if message.sender_participant_id == participant.pk and not message.is_deleted
+        if is_mine and not message.is_deleted
         else None,
         "edit_url": reverse(
             "communication:message_edit",
             args=[message.pk],
         )
-        if message.sender_participant_id == participant.pk and not message.is_deleted
+        if is_mine and not message.is_deleted
         else None,
         "pin_url": reverse(
             "communication:message_pin",
@@ -211,14 +216,18 @@ def conversation_list(request):
     query = request.GET.get("q", "").strip()[:120]
     conversations = (
         Conversation.objects.filter(
-            Q(participant_one=participant) | Q(participant_two=participant)
+            participant_identity_q("participant_one", participant)
+            | participant_identity_q("participant_two", participant)
         )
         .select_related("participant_one", "participant_two")
         .annotate(
             unread_count=Count(
                 "messages",
                 filter=Q(messages__read_at__isnull=True)
-                & ~Q(messages__sender_participant=participant),
+                & ~participant_identity_q(
+                    "messages__sender_participant",
+                    participant,
+                ),
                 distinct=True,
             )
         )
@@ -381,6 +390,12 @@ def _conversation_for_participant(request, conversation_id):
     return conversation, participant, None
 
 
+def _other_participant(conversation, participant):
+    if conversation.participant_one.matches_identity(participant):
+        return conversation.participant_two
+    return conversation.participant_one
+
+
 def conversation_detail(request, conversation_id):
     conversation, participant, response = _conversation_for_participant(
         request,
@@ -392,7 +407,9 @@ def conversation_detail(request, conversation_id):
     Message.objects.filter(
         conversation=conversation,
         read_at__isnull=True,
-    ).exclude(sender_participant=participant).update(read_at=timezone.now())
+    ).exclude(
+        participant_identity_q("sender_participant", participant)
+    ).update(read_at=timezone.now())
     messages = list(
         conversation.messages.select_related(
             "sender_participant",
@@ -409,6 +426,7 @@ def conversation_detail(request, conversation_id):
     )
     for message in messages:
         message.reaction_summaries = reaction_summaries.get(message.pk, [])
+        message.is_mine = message.sender_participant.matches_identity(participant)
     message_form = MessageForm()
     if not conversation.is_open:
         message_form.fields["content"].disabled = True
@@ -422,11 +440,7 @@ def conversation_detail(request, conversation_id):
             )
         )
 
-    other_participant = (
-        conversation.participant_two
-        if conversation.participant_one_id == participant.pk
-        else conversation.participant_one
-    )
+    other_participant = _other_participant(conversation, participant)
     return render(
         request,
         "communication/conversation_detail.html",
@@ -474,30 +488,27 @@ def poll_messages(request, conversation_id):
     unread_ids = [
         message.pk
         for message in messages
-        if message.sender_participant_id != participant.pk and message.read_at is None
+        if not message.sender_participant.matches_identity(participant)
+        and message.read_at is None
     ]
     if unread_ids:
         Message.objects.filter(pk__in=unread_ids).update(read_at=timezone.now())
 
     read_ids = list(
         conversation.messages.filter(
-            sender_participant=participant,
+            participant_identity_q("sender_participant", participant),
             read_at__isnull=False,
         )
         .order_by("-pk")
         .values_list("pk", flat=True)[:100]
     )
-    other_participant = (
-        conversation.participant_two
-        if conversation.participant_one_id == participant.pk
-        else conversation.participant_one
-    )
+    other_participant = _other_participant(conversation, participant)
     typing_status = (
         ConversationTypingStatus.objects.filter(
             conversation=conversation,
             updated_at__gte=timezone.now() - timedelta(seconds=5),
         )
-        .exclude(participant=participant)
+        .exclude(participant_identity_q("participant", participant))
         .select_related("participant")
         .first()
     )
@@ -689,7 +700,7 @@ def message_edit(request, message_id):
     )
     if response:
         return response
-    if message.sender_participant_id != participant.pk:
+    if not message.sender_participant.matches_identity(participant):
         raise PermissionDenied
     if message.is_deleted:
         return JsonResponse(

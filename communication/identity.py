@@ -2,9 +2,21 @@ import os
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.db.models import Q
 from django.utils import timezone
 
 from .models import CommunicationParticipant
+
+
+def participant_identity_q(field_name, participant):
+    if participant.is_guest:
+        return Q(
+            **{
+                f"{field_name}__user__isnull": True,
+                f"{field_name}__display_name__iexact": participant.display_name,
+            }
+        )
+    return Q(**{f"{field_name}_id": participant.pk})
 
 
 def guest_mode_enabled():

@@ -121,7 +121,7 @@ def create_message(
 
 
 def edit_message(*, message, sender, content):
-    if message.sender_participant_id != sender.pk:
+    if not message.sender_participant.matches_identity(sender):
         raise PermissionDenied
     if message.is_deleted:
         raise ValidationError("Deleted messages cannot be edited.")
@@ -143,7 +143,7 @@ def edit_message(*, message, sender, content):
 
 @transaction.atomic
 def delete_message(*, message, sender):
-    if message.sender_participant_id != sender.pk:
+    if not message.sender_participant.matches_identity(sender):
         raise PermissionDenied
     if message.deleted_at is None:
         message.reactions.all().delete()

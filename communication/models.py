@@ -62,6 +62,16 @@ class CommunicationParticipant(models.Model):
             return self.user.get_full_name() or self.user.get_username()
         return self.display_name or "Guest"
 
+    def matches_identity(self, other):
+        if self.pk is not None and self.pk == other.pk:
+            return True
+        return (
+            self.is_guest
+            and other.is_guest
+            and bool(self.display_name)
+            and self.display_name.casefold() == other.display_name.casefold()
+        )
+
 
 class Conversation(models.Model):
     class CloseReason(models.TextChoices):
@@ -148,7 +158,16 @@ class Conversation(models.Model):
         )
 
     def includes(self, participant):
-        return participant.pk in (self.participant_one_id, self.participant_two_id)
+        participant_ids = (self.participant_one_id, self.participant_two_id)
+        if participant.pk is not None and participant.pk in participant_ids:
+            return True
+        if not participant.is_guest or not participant.display_name:
+            return False
+        return CommunicationParticipant.objects.filter(
+            pk__in=participant_ids,
+            user__isnull=True,
+            display_name__iexact=participant.display_name,
+        ).exists()
 
     def clean(self):
         if self.passenger_id and self.passenger_id == self.driver_id:

@@ -98,13 +98,13 @@
     >
         {% for message in chat_messages %}
             <article
-                class="message {% if message.sender_participant_id == participant.id %}message-mine{% endif %}"
+                class="message {% if message.is_mine %}message-mine{% endif %}"
                 data-message-id="{{ message.id }}"
                 data-sender-id="{{ message.sender_participant_id }}"
                 data-sent-at="{{ message.sent_at|date:'c' }}"
                 data-pinned="{% if message.pinned_at %}true{% else %}false{% endif %}"
                 data-reaction-url="{% url 'communication:message_reaction' message.id %}"
-                {% if message.sender_participant_id == participant.id and not message.is_deleted %}data-edit-url="{% url 'communication:message_edit' message.id %}" data-delete-url="{% url 'communication:message_delete' message.id %}"{% endif %}
+                {% if message.is_mine and not message.is_deleted %}data-edit-url="{% url 'communication:message_edit' message.id %}" data-delete-url="{% url 'communication:message_delete' message.id %}"{% endif %}
                 {% if not message.is_deleted %}data-pin-url="{% url 'communication:message_pin' message.id %}"{% endif %}
             >
                 <span class="avatar message-avatar" aria-hidden="true">
@@ -115,7 +115,7 @@
                     <time datetime="{{ message.sent_at|date:'c' }}">{{ message.sent_at|date:"M j, H:i" }}</time>
                     <span class="edited-label" {% if not message.edited_at %}hidden{% endif %}>edited</span>
                     {% if message.pinned_at %}<span class="pinned-mark">Pinned</span>{% endif %}
-                    {% if message.sender_participant_id == participant.id %}
+                    {% if message.is_mine %}
                         <span class="read-status" data-read-status-for="{{ message.id }}">
                             {% if message.read_at %}Seen{% else %}Sent{% endif %}
                         </span>
@@ -175,10 +175,10 @@
                             <summary aria-label="More message actions" title="More message actions">•••</summary>
                             <div class="message-more-options">
                                 <button class="pin-message" type="button">{% if message.pinned_at %}Unpin message{% else %}Pin message{% endif %}</button>
-                                {% if message.sender_participant_id == participant.id and message.content %}
+                                {% if message.is_mine and message.content %}
                                     <button class="edit-message" type="button">Edit message</button>
                                 {% endif %}
-                                {% if message.sender_participant_id == participant.id %}
+                                {% if message.is_mine %}
                                     <button class="delete-message" type="button">Delete message</button>
                                 {% endif %}
                             </div>

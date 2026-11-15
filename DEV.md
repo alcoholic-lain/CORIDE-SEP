@@ -88,7 +88,7 @@ Shared assets such as `assets/kitty.png` are collected into `STATIC_ROOT` during
 
 ### Turso database on Vercel
 
-The app uses local SQLite unless `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are configured. In Vercel, set both for each deployment environment you use and add a newly generated `DJANGO_SECRET_KEY`. Rotate any database token that has been shared in a screenshot or chat. Do not put secrets in URLs or commit them to the repository. Vercel deployments fail clearly when the required settings are missing instead of silently creating an ephemeral SQLite database.
+The app uses local SQLite unless `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are configured. Remote Turso connections use Turso's SQL-over-HTTP driver. In Vercel, set both for each deployment environment you use and add a newly generated `DJANGO_SECRET_KEY`. Rotate any database token that has been shared in a screenshot or chat. Do not put secrets in URLs or commit them to the repository. Vercel deployments fail clearly when the required settings are missing instead of silently creating an ephemeral SQLite database.
 
 For local development, the default remains `db.sqlite3`. To connect locally to Turso, create `.env.local` at the repository root with only the `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` values, omitting Vercel's `VERCEL` flag. The file is ignored by Git and loaded by `manage.py` for non-test commands. Vercel may not allow secret values to be pulled into that file; replace any `[SENSITIVE]` placeholders with a newly rotated token before using it. Run `uv run manage.py migrate` only after verifying which database the environment points to.
 

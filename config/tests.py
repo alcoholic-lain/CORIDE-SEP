@@ -62,7 +62,7 @@ class VercelSettingsTests(SimpleTestCase):
             Path("/project"),
         )
 
-        self.assertEqual(database["ENGINE"], "libsql.db.backends.libsql")
+        self.assertEqual(database["ENGINE"], "config.db_backends.turso")
         self.assertEqual(database["NAME"], "libsql://example.turso.io")
         self.assertEqual(database["OPTIONS"], {"auth_token": "test-token"})
 

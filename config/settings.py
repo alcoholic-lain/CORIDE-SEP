@@ -139,11 +139,8 @@ def _get_database_config(environ, base_dir):
                 "TURSO_AUTH_TOKEN is required when using a remote Turso database."
             )
 
-        from config.libsql_compat import prepare_libsql_driver
-
-        prepare_libsql_driver()
         return {
-            "ENGINE": "libsql.db.backends.libsql",
+            "ENGINE": "config.db_backends.turso",
             "NAME": database_url,
             "OPTIONS": {"auth_token": auth_token},
         }

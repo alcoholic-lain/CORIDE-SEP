@@ -167,8 +167,27 @@ class Conversation(models.Model):
         participant_ids = (self.participant_one_id, self.participant_two_id)
         if participant.pk is not None and (
             participant.pk in participant_ids
-            or self.participants.filter(pk=participant.pk).exists()
         ):
+            return True
+        prefetched_members = getattr(self, "_prefetched_objects_cache", {}).get(
+            "participants"
+        )
+        if prefetched_members is not None:
+            members = list(prefetched_members)
+            if any(member.matches_identity(participant) for member in members):
+                return True
+            if participant.is_guest and participant.display_name:
+                direct_members = [self.participant_one]
+                if self.participant_two_id is not None:
+                    direct_members.append(self.participant_two)
+                return any(
+                    member.matches_identity(participant)
+                    for member in direct_members
+                )
+            return False
+        if participant.pk is not None and self.participants.filter(
+            pk=participant.pk
+        ).exists():
             return True
         if not participant.is_guest or not participant.display_name:
             return False

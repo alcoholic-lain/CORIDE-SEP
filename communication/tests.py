@@ -5,7 +5,9 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.test import Client, TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -151,6 +153,74 @@ class ConversationTests(CommunicationTestCase):
         message.refresh_from_db()
         self.assertIsNotNone(message.read_at)
 
+    def test_conversation_detail_loads_latest_page_and_marks_only_loaded_messages_read(self):
+        messages = [
+            Message.objects.create(
+                conversation=self.conversation,
+                sender=self.passenger,
+                sender_participant=self.passenger_participant,
+                content=f"History message {index}",
+            )
+            for index in range(12)
+        ]
+        self.client.force_login(self.driver)
+
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.get(
+                reverse(
+                    "communication:conversation_detail",
+                    args=[self.conversation.pk],
+                )
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "conversation_detail.js")
+        auth_user_queries = [
+            query
+            for query in queries
+            if 'from "auth_user"' in query["sql"].lower()
+        ]
+        self.assertLessEqual(len(auth_user_queries), 3)
+        self.assertEqual(
+            [message.pk for message in response.context["chat_messages"]],
+            [message.pk for message in messages[-10:]],
+        )
+        self.assertTrue(response.context["has_older_messages"])
+        for message in messages[:2]:
+            message.refresh_from_db()
+            self.assertIsNone(message.read_at)
+
+        older_response = self.client.get(
+            reverse(
+                "communication:load_older_messages",
+                args=[self.conversation.pk],
+            ),
+            {"before": messages[-10].pk},
+        )
+
+        self.assertEqual(older_response.status_code, 200)
+        older_data = older_response.json()
+        self.assertEqual(
+            [message["id"] for message in older_data["messages"]],
+            [message.pk for message in messages[:2]],
+        )
+        self.assertFalse(older_data["has_older"])
+        for message in messages[:2]:
+            message.refresh_from_db()
+            self.assertIsNotNone(message.read_at)
+
+    def test_older_message_cursor_must_be_positive_integer(self):
+        self.client.force_login(self.driver)
+        older_url = reverse(
+            "communication:load_older_messages",
+            args=[self.conversation.pk],
+        )
+
+        for cursor in ("", "not-a-number", "0", "-1"):
+            with self.subTest(cursor=cursor):
+                response = self.client.get(older_url, {"before": cursor})
+                self.assertEqual(response.status_code, 400)
+
     def test_only_participants_can_view_and_send_messages(self):
         self.client.force_login(self.outsider)
 
@@ -291,6 +361,13 @@ class ConversationTests(CommunicationTestCase):
         self.assertEqual(response.json()["reactions"], [])
         self.assertFalse(MessageReaction.objects.exists())
 
+        self.client.force_login(self.driver)
+        response = self.client.get(
+            reverse("communication:poll_messages", args=[self.conversation.pk]),
+            {"after": message.pk, "visible": str(message.pk)},
+        )
+        self.assertEqual(response.json()["reactions"][str(message.pk)], [])
+
     def test_sender_can_edit_and_edits_sync_through_polling(self):
         message = Message.objects.create(
             conversation=self.conversation,
@@ -324,6 +401,83 @@ class ConversationTests(CommunicationTestCase):
         self.client.force_login(self.passenger)
         self.assertEqual(
             self.client.post(edit_url, {"content": "   "}).status_code,
+            400,
+        )
+
+    def test_poll_syncs_reactions_and_message_state_only_for_visible_messages(self):
+        old_message = Message.objects.create(
+            conversation=self.conversation,
+            sender=self.passenger,
+            sender_participant=self.passenger_participant,
+            content="Older message",
+        )
+        visible_message = Message.objects.create(
+            conversation=self.conversation,
+            sender=self.passenger,
+            sender_participant=self.passenger_participant,
+            content="Visible message",
+        )
+        MessageReaction.objects.create(
+            message=old_message,
+            participant=self.passenger_participant,
+            emoji=MessageReaction.Emoji.LIKE,
+        )
+        MessageReaction.objects.create(
+            message=visible_message,
+            participant=self.passenger_participant,
+            emoji=MessageReaction.Emoji.LOVE,
+        )
+        visible_message.pinned_at = timezone.now()
+        visible_message.save(update_fields=["pinned_at"])
+        outsider_participant, _ = CommunicationParticipant.objects.get_or_create(
+            user=self.outsider,
+            defaults={"display_name": self.outsider.get_username()},
+        )
+        other_conversation = Conversation.objects.create(
+            participant_one=self.passenger_participant,
+            participant_two=outsider_participant,
+            passenger=self.passenger,
+            driver=self.outsider,
+        )
+        foreign_message = Message.objects.create(
+            conversation=other_conversation,
+            sender=self.outsider,
+            sender_participant=outsider_participant,
+            content="Private message",
+        )
+        MessageReaction.objects.create(
+            message=foreign_message,
+            participant=outsider_participant,
+            emoji=MessageReaction.Emoji.WOW,
+        )
+        self.client.force_login(self.driver)
+
+        response = self.client.get(
+            reverse("communication:poll_messages", args=[self.conversation.pk]),
+            {
+                "after": visible_message.pk,
+                "visible": f"{visible_message.pk},{foreign_message.pk}",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(list(data["reactions"]), [str(visible_message.pk)])
+        self.assertEqual(data["pinned_ids"], [visible_message.pk])
+        self.assertEqual(data["synced_ids"], [str(visible_message.pk)])
+        self.assertNotIn(str(old_message.pk), data["reactions"])
+        self.assertNotIn(str(foreign_message.pk), data["reactions"])
+        self.assertEqual(
+            self.client.get(
+                reverse("communication:poll_messages", args=[self.conversation.pk]),
+                {
+                    "after": visible_message.pk,
+                    "visible": ",".join(
+                        str(message_id)
+                        for message_id in range(1, 52)
+                    ),
+                },
+            ).status_code,
             400,
         )
 
@@ -563,22 +717,61 @@ class GuestConversationTests(TestCase):
             {"display_name": name},
         )
 
-    def test_new_chat_picker_lists_unique_other_guest_profiles(self):
+    def test_new_chat_picker_lists_only_unique_contacts_from_existing_chats(self):
         self.start_guest(self.owner, "Owner")
         first_guest = Client()
         self.start_guest(first_guest, "Sam")
         duplicate_guest = Client()
         self.start_guest(duplicate_guest, "sAM")
+        unrelated_guest = Client()
+        self.start_guest(unrelated_guest, "Lee")
+        owner_participant = CommunicationParticipant.objects.get(
+            session_key=self.owner.session.session_key
+        )
+        first_participant = CommunicationParticipant.objects.get(
+            session_key=first_guest.session.session_key
+        )
+        existing_chat = Conversation.objects.create(
+            participant_one=owner_participant,
+            participant_two=first_participant,
+        )
+        existing_chat.participants.add(owner_participant, first_participant)
 
         response = self.owner.get(reverse("communication:create_conversation"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Private chat")
+        self.assertContains(response, "Group chat")
+        self.assertContains(response, "Only people from your existing chats")
         choices = list(response.context["guest_options"])
         self.assertEqual(len(choices), 1)
         self.assertEqual(choices[0].display_name.casefold(), "sam")
 
+    def test_new_chat_rejects_an_unrelated_guest_even_if_submitted_manually(self):
+        self.start_guest(self.owner, "Owner")
+        unrelated_guest = Client()
+        self.start_guest(unrelated_guest, "Unrelated")
+        unrelated_participant = CommunicationParticipant.objects.get(
+            session_key=unrelated_guest.session.session_key
+        )
+
+        response = self.owner.post(
+            reverse("communication:create_conversation"),
+            {
+                "title": "Unrelated chat",
+                "guests": [str(unrelated_participant.pk)],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("guests", response.context["form"].errors)
+        self.assertFalse(Conversation.objects.filter(title="Unrelated chat").exists())
+
     def test_creator_can_add_multiple_guests_to_a_group_chat(self):
         self.start_guest(self.owner, "Owner")
+        owner_participant = CommunicationParticipant.objects.get(
+            session_key=self.owner.session.session_key
+        )
         invited_clients = [Client(), Client()]
         for client, name in zip(invited_clients, ("Sam", "Lee")):
             self.start_guest(client, name)
@@ -588,10 +781,17 @@ class GuestConversationTests(TestCase):
             )
             for client in invited_clients
         ]
+        for invited_participant in invited_participants:
+            existing_chat = Conversation.objects.create(
+                participant_one=owner_participant,
+                participant_two=invited_participant,
+            )
+            existing_chat.participants.add(owner_participant, invited_participant)
 
         response = self.owner.post(
             reverse("communication:create_conversation"),
             {
+                "chat_type": "group",
                 "title": "Campus group",
                 "initial_message": "Welcome everyone",
                 "guests": [str(participant.pk) for participant in invited_participants],
@@ -667,6 +867,46 @@ class GuestConversationTests(TestCase):
             )
         )
         self.assertEqual(denied.status_code, 403)
+
+    def test_chat_type_requires_one_contact_for_private_or_two_for_group(self):
+        self.start_guest(self.owner, "Owner")
+        owner_participant = CommunicationParticipant.objects.get(
+            session_key=self.owner.session.session_key
+        )
+        invited_clients = [Client(), Client()]
+        for client, name in zip(invited_clients, ("Sam", "Lee")):
+            self.start_guest(client, name)
+        invited_participants = [
+            CommunicationParticipant.objects.get(
+                session_key=client.session.session_key
+            )
+            for client in invited_clients
+        ]
+        for invited_participant in invited_participants:
+            existing_chat = Conversation.objects.create(
+                participant_one=owner_participant,
+                participant_two=invited_participant,
+            )
+            existing_chat.participants.add(owner_participant, invited_participant)
+
+        one_person_group = self.owner.post(
+            reverse("communication:create_conversation"),
+            {
+                "chat_type": "group",
+                "guests": [str(invited_participants[0].pk)],
+            },
+        )
+        two_person_private = self.owner.post(
+            reverse("communication:create_conversation"),
+            {
+                "chat_type": "private",
+                "guests": [str(participant.pk) for participant in invited_participants],
+            },
+        )
+
+        self.assertIn("guests", one_person_group.context["form"].errors)
+        self.assertIn("guests", two_person_private.context["form"].errors)
+        self.assertEqual(Conversation.objects.count(), 2)
 
     def test_new_chat_picker_rejects_the_current_guest(self):
         self.start_guest(self.owner, "Owner")

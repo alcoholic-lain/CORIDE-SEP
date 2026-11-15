@@ -231,6 +231,40 @@ button.button {
     font-weight: 700;
 }
 
+.chat-type-field {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.chat-type-field legend {
+    font-weight: 700;
+}
+
+.chat-type-options {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0.35rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.chat-type-options label {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    cursor: pointer;
+}
+
+.chat-type-options input[type="radio"] {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    accent-color: var(--coride);
+}
+
 .guest-choice-list {
     display: grid;
     gap: 0.35rem;
@@ -771,6 +805,14 @@ p {
     overflow-y: auto;
     background: #faf8f6;
     overscroll-behavior: contain;
+}
+
+.history-status {
+    flex: none;
+    padding: 0.6rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-align: center;
 }
 
 .message {

@@ -1,8 +1,10 @@
 from pathlib import Path
 
 from django import forms
+from django.db.models import Q
 
-from .models import CommunicationParticipant, Message, Review
+from .identity import participant_identity_q
+from .models import CommunicationParticipant, Conversation, Message, Review
 from .moderation import is_blocked
 
 
@@ -30,10 +32,20 @@ class GuestNameForm(forms.Form):
 
 
 class NewConversationForm(forms.Form):
+    chat_type = forms.ChoiceField(
+        choices=(
+            ("private", "Private chat"),
+            ("group", "Group chat"),
+        ),
+        required=False,
+        initial="private",
+        widget=forms.RadioSelect(attrs={"class": "chat-type-options"}),
+        label="Chat type",
+    )
     guests = forms.ModelMultipleChoiceField(
         queryset=CommunicationParticipant.objects.none(),
         required=False,
-        label="Add guests",
+        label="Add chat contacts",
         widget=forms.CheckboxSelectMultiple(attrs={"class": "guest-choice-list"}),
     )
     title = forms.CharField(
@@ -59,12 +71,25 @@ class NewConversationForm(forms.Form):
 
     def __init__(self, *args, participant, **kwargs):
         super().__init__(*args, **kwargs)
+        shared_conversations = Conversation.objects.filter(
+            participant_identity_q("participant_one", participant)
+            | participant_identity_q("participant_two", participant)
+            | participant_identity_q("participants", participant)
+        ).values("pk")
         candidates = (
             CommunicationParticipant.objects.filter(
                 user__isnull=True,
             )
+            .filter(
+                Q(
+                    conversation_memberships__conversation_id__in=shared_conversations
+                )
+                | Q(conversations_as_first__in=shared_conversations)
+                | Q(conversations_as_second__in=shared_conversations)
+            )
             .exclude(display_name="")
             .order_by("-last_seen_at", "display_name", "pk")
+            .distinct()
         )
         seen_names = (
             {participant.display_name.casefold()}
@@ -80,6 +105,22 @@ class NewConversationForm(forms.Form):
         self.fields["guests"].queryset = CommunicationParticipant.objects.filter(
             pk__in=guest_ids
         ).order_by("display_name", "pk")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        guests = cleaned_data.get("guests", [])
+        chat_type = cleaned_data.get("chat_type") or "private"
+        if chat_type == "group" and len(guests) < 2:
+            self.add_error(
+                "guests",
+                "Choose at least two existing chat contacts for a group chat.",
+            )
+        elif chat_type == "private" and len(guests) > 1:
+            self.add_error(
+                "guests",
+                "A private chat can include only one contact.",
+            )
+        return cleaned_data
 
     def clean_title(self):
         return self.cleaned_data["title"].strip() or "New conversation"

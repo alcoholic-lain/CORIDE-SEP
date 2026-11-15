@@ -8,7 +8,6 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Avg, Count, Exists, OuterRef, Q
-from django.db.models.functions import Coalesce
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -40,6 +39,9 @@ from .models import (
     Review,
 )
 from .services import create_message, delete_message, edit_message
+
+
+MESSAGE_PAGE_SIZE = 10
 
 
 def _csv_cell(value):
@@ -145,8 +147,10 @@ def _message_payload(message, participant):
         "sent_at": message.sent_at.isoformat(),
         "edited_at": message.edited_at.isoformat() if message.edited_at else None,
         "pinned": message.pinned_at is not None,
+        "read": message.read_at is not None,
         "reply": _reply_summary(message.reply_to),
         "attachment": _message_attachment(message),
+        "reactions": getattr(message, "reaction_summaries", []),
         "delete_url": reverse(
             "communication:message_delete",
             args=[message.pk],
@@ -172,6 +176,45 @@ def _message_payload(message, participant):
         if not message.is_deleted
         else None,
     }
+
+
+def _message_page(conversation, before_id=None):
+    messages = conversation.messages.select_related(
+        "sender_participant",
+        "sender_participant__user",
+        "sender",
+        "reply_to",
+        "reply_to__sender_participant",
+        "reply_to__sender_participant__user",
+    ).order_by("-pk")
+    if before_id is not None:
+        messages = messages.filter(pk__lt=before_id)
+    page = list(messages[: MESSAGE_PAGE_SIZE + 1])
+    has_older = len(page) > MESSAGE_PAGE_SIZE
+    page = page[:MESSAGE_PAGE_SIZE]
+    page.reverse()
+    return page, has_older
+
+
+def _mark_messages_read(conversation, participant, message_ids):
+    if not message_ids:
+        return
+    unread_ids = list(
+        _unread_messages(conversation, participant)
+        .filter(pk__in=message_ids)
+        .values_list("pk", flat=True)
+    )
+    if unread_ids:
+        MessageRead.objects.bulk_create(
+            [
+                MessageRead(message_id=message_id, participant=participant)
+                for message_id in unread_ids
+            ],
+            ignore_conflicts=True,
+        )
+        Message.objects.filter(pk__in=unread_ids, read_at__isnull=True).update(
+            read_at=timezone.now()
+        )
 
 
 def _is_online(participant):
@@ -433,10 +476,12 @@ def _conversation_for_participant(request, conversation_id):
     conversation = get_object_or_404(
         Conversation.objects.select_related(
             "participant_one",
+            "participant_one__user",
             "participant_two",
+            "participant_two__user",
             "passenger",
             "driver",
-        ).prefetch_related("participants"),
+        ).prefetch_related("participants", "participants__user"),
         pk=conversation_id,
     )
     if not conversation.includes(participant):
@@ -475,28 +520,11 @@ def conversation_detail(request, conversation_id):
     if response:
         return response
 
-    now = timezone.now()
-    unread_ids = list(
-        _unread_messages(conversation, participant).values_list("pk", flat=True)
-    )
-    if unread_ids:
-        MessageRead.objects.bulk_create(
-            [
-                MessageRead(message_id=message_id, participant=participant)
-                for message_id in unread_ids
-            ],
-            ignore_conflicts=True,
-        )
-        Message.objects.filter(pk__in=unread_ids, read_at__isnull=True).update(
-            read_at=now
-        )
-    messages = list(
-        conversation.messages.select_related(
-            "sender_participant",
-            "sender",
-            "reply_to",
-            "reply_to__sender_participant",
-        )
+    messages, has_older_messages = _message_page(conversation)
+    _mark_messages_read(
+        conversation,
+        participant,
+        [message.pk for message in messages],
     )
     reaction_summaries = _reaction_summaries(
         MessageReaction.objects.filter(
@@ -522,6 +550,11 @@ def conversation_detail(request, conversation_id):
 
     other_participants = _other_participants(conversation, participant)
     other_participant = next(iter(other_participants), None)
+    pinned_messages = list(
+        conversation.messages.filter(pinned_at__isnull=False)
+        .select_related("sender_participant", "sender_participant__user")
+        .order_by("pk")
+    )
     return render(
         request,
         "communication/conversation_detail.html",
@@ -545,10 +578,14 @@ def conversation_detail(request, conversation_id):
             "participant_count": len(other_participants) + 1,
             "invite_url": invite_url,
             "latest_message_id": messages[-1].pk if messages else 0,
+            "oldest_message_id": messages[0].pk if messages else 0,
+            "has_older_messages": has_older_messages,
+            "older_messages_url": reverse(
+                "communication:load_older_messages",
+                args=[conversation.pk],
+            ),
             "reaction_choices": MessageReaction.Emoji.choices,
-            "pinned_messages": [
-                message for message in messages if message.pinned_at is not None
-            ],
+            "pinned_messages": pinned_messages,
         },
     )
 
@@ -568,40 +605,48 @@ def poll_messages(request, conversation_id):
     if after < 0:
         return JsonResponse({"error": "Invalid message cursor."}, status=400)
 
-    messages = list(
-        conversation.messages.filter(pk__gt=after)
+    raw_visible_ids = request.GET.get("visible")
+    if raw_visible_ids is None:
+        visible_ids = list(
+            conversation.messages.order_by("-pk").values_list("pk", flat=True)[
+                :MESSAGE_PAGE_SIZE * 5
+            ]
+        )
+    else:
+        try:
+            visible_ids = [
+                int(value)
+                for value in raw_visible_ids.split(",")
+                if value
+            ]
+        except ValueError:
+            return JsonResponse({"error": "Invalid visible message IDs."}, status=400)
+        if len(visible_ids) > MESSAGE_PAGE_SIZE * 5 or any(
+            message_id <= 0 for message_id in visible_ids
+        ):
+            return JsonResponse({"error": "Invalid visible message IDs."}, status=400)
+        visible_ids = list(dict.fromkeys(visible_ids))
+
+    new_message_ids = conversation.messages.filter(pk__gt=after).order_by("pk").values(
+        "pk"
+    )[:100]
+    synced_messages = list(
+        conversation.messages.filter(
+            Q(pk__in=visible_ids) | Q(pk__in=new_message_ids)
+        )
         .select_related(
             "sender_participant",
+            "sender_participant__user",
             "reply_to",
             "reply_to__sender_participant",
+            "reply_to__sender_participant__user",
         )
-        .order_by("pk")[:100]
+        .order_by("pk")
     )
-    unread_ids = list(
-        _unread_messages(conversation, participant)
-        .filter(pk__in=[message.pk for message in messages])
-        .values_list("pk", flat=True)
-    )
-    if unread_ids:
-        MessageRead.objects.bulk_create(
-            [
-                MessageRead(message_id=message_id, participant=participant)
-                for message_id in unread_ids
-            ],
-            ignore_conflicts=True,
-        )
-        Message.objects.filter(pk__in=unread_ids, read_at__isnull=True).update(
-            read_at=timezone.now()
-        )
-
-    read_ids = list(
-        conversation.messages.filter(
-            participant_identity_q("sender_participant", participant),
-            read_at__isnull=False,
-        )
-        .order_by("-pk")
-        .values_list("pk", flat=True)[:100]
-    )
+    messages = [message for message in synced_messages if message.pk > after][:100]
+    new_message_ids = [message.pk for message in messages]
+    _mark_messages_read(conversation, participant, new_message_ids)
+    sync_ids = list(dict.fromkeys([*visible_ids, *new_message_ids]))
     other_participants = _other_participants(conversation, participant)
     typing_status = (
         ConversationTypingStatus.objects.filter(
@@ -612,24 +657,38 @@ def poll_messages(request, conversation_id):
         .select_related("participant")
         .first()
     )
-    reactions = _reaction_summaries(
-        MessageReaction.objects.filter(message__conversation=conversation),
-        participant,
-    )
-    updated_messages = (
-        conversation.messages.filter(
-            Q(edited_at__isnull=False) | Q(deleted_at__isnull=False)
+    reactions = (
+        _reaction_summaries(
+            MessageReaction.objects.filter(
+                message__conversation=conversation,
+                message_id__in=sync_ids,
+            ),
+            participant,
         )
-        .annotate(last_changed=Coalesce("edited_at", "deleted_at"))
-        .select_related("sender_participant", "reply_to", "reply_to__sender_participant")
-        .order_by("-last_changed")[:100]
+        if sync_ids
+        else {}
     )
-    pinned_ids = list(
-        conversation.messages.filter(pinned_at__isnull=False).values_list(
-            "pk",
-            flat=True,
-        )
-    )
+    for message in messages:
+        message.reaction_summaries = reactions.get(message.pk, [])
+    updated_messages = [
+        message
+        for message in synced_messages
+        if message.edited_at is not None or message.deleted_at is not None
+    ]
+    read_ids = [
+        message.pk
+        for message in synced_messages
+        if message.read_at is not None
+        and message.sender_participant.matches_identity(participant)
+    ]
+    pinned_ids = [
+        message.pk for message in synced_messages if message.pinned_at is not None
+    ]
+    synced_ids = [str(message.pk) for message in synced_messages]
+    reactions_by_message = {
+        str(message.pk): reactions.get(message.pk, [])
+        for message in synced_messages
+    }
     return JsonResponse(
         {
             "is_open": conversation.is_open,
@@ -650,16 +709,57 @@ def poll_messages(request, conversation_id):
             "participant_count": len(other_participants) + 1,
             "has_second_participant": len(other_participants) > 0,
             "read_ids": read_ids,
-            "reactions": {
-                str(message_id): summaries
-                for message_id, summaries in reactions.items()
-            },
+            "synced_ids": synced_ids,
+            "reactions": reactions_by_message,
             "pinned_ids": pinned_ids,
             "messages": [_message_payload(message, participant) for message in messages],
             "updated_messages": [
                 _message_payload(message, participant)
                 for message in updated_messages
             ],
+        }
+    )
+
+
+@require_GET
+def load_older_messages(request, conversation_id):
+    conversation, participant, response = _conversation_for_participant(
+        request,
+        conversation_id,
+    )
+    if response:
+        return response
+
+    try:
+        before_id = int(request.GET.get("before", ""))
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Invalid message cursor."}, status=400)
+    if before_id <= 0:
+        return JsonResponse({"error": "Invalid message cursor."}, status=400)
+
+    messages, has_older = _message_page(conversation, before_id=before_id)
+    _mark_messages_read(
+        conversation,
+        participant,
+        [message.pk for message in messages],
+    )
+    reaction_summaries = _reaction_summaries(
+        MessageReaction.objects.filter(
+            message_id__in=[message.pk for message in messages]
+        ),
+        participant,
+    )
+    for message in messages:
+        message.reaction_summaries = reaction_summaries.get(message.pk, [])
+
+    return JsonResponse(
+        {
+            "messages": [
+                _message_payload(message, participant)
+                for message in messages
+            ],
+            "has_older": has_older,
+            "oldest_id": messages[0].pk if messages else before_id,
         }
     )
 

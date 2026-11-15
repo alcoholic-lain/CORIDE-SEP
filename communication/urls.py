@@ -24,6 +24,11 @@ urlpatterns = [
         name="poll_messages",
     ),
     path(
+        "chat/<int:conversation_id>/messages/older/",
+        views.load_older_messages,
+        name="load_older_messages",
+    ),
+    path(
         "chat/<int:conversation_id>/typing/",
         views.typing_status,
         name="typing_status",

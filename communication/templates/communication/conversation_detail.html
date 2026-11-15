@@ -981,6 +981,20 @@
         resizeComposer();
         handleTypingInput();
     });
+    input.addEventListener("keydown", (event) => {
+        if (
+            event.key !== "Enter"
+            || event.shiftKey
+            || event.isComposing
+            || input.value.endsWith(" ")
+        ) {
+            return;
+        }
+        event.preventDefault();
+        if (input.value.trim() || attachmentInput.files.length) {
+            form.requestSubmit();
+        }
+    });
     input.addEventListener("blur", stopTyping);
     form.addEventListener("click", (event) => {
         const emojiButton = event.target.closest("[data-compose-emoji]");

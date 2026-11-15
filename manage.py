@@ -2,6 +2,14 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+from pathlib import Path
+
+from dotenv import dotenv_values, load_dotenv
+
+if "test" not in sys.argv[1:]:
+    env_file = Path(__file__).resolve().parent / ".env.local"
+    if not dotenv_values(env_file).get("VERCEL"):
+        load_dotenv(env_file)
 
 
 def main():

@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
+
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,13 +23,25 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-0d3rfij#__@l$b(aygb3g6r5%(33h9oc0@8&xzu=6g3wr+jtky'
-
 # SECURITY WARNING: don't run with debug turned on in production!
 def _get_debug(environ):
     default = "false" if environ.get("VERCEL") else "true"
     return environ.get("DJANGO_DEBUG", default).lower() == "true"
+
+
+def _get_secret_key(environ):
+    secret_key = environ.get("DJANGO_SECRET_KEY", "").strip()
+    if secret_key:
+        return secret_key
+    if environ.get("VERCEL"):
+        raise ImproperlyConfigured(
+            "Configure DJANGO_SECRET_KEY in Vercel before deploying."
+        )
+    return 'django-insecure-0d3rfij#__@l$b(aygb3g6r5%(33h9oc0@8&xzu=6g3wr+jtky'
+
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = _get_secret_key(os.environ)
 
 
 def _get_allowed_hosts(environ):
@@ -96,15 +111,62 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
+def _get_database_config(environ, base_dir):
+    database_url = environ.get("TURSO_DATABASE_URL", "").strip()
+    auth_token = environ.get("TURSO_AUTH_TOKEN", "").strip()
+
+    if database_url:
+        try:
+            parsed_url = urlsplit(database_url)
+        except ValueError as error:
+            raise ImproperlyConfigured(
+                "TURSO_DATABASE_URL must be a valid libsql:// URL."
+            ) from error
+
+        if (
+            parsed_url.scheme != "libsql"
+            or not parsed_url.hostname
+            or parsed_url.username
+            or parsed_url.password
+            or parsed_url.query
+            or parsed_url.fragment
+        ):
+            raise ImproperlyConfigured(
+                "TURSO_DATABASE_URL must be a libsql:// endpoint without embedded credentials."
+            )
+        if not auth_token:
+            raise ImproperlyConfigured(
+                "TURSO_AUTH_TOKEN is required when using a remote Turso database."
+            )
+
+        from config.libsql_compat import prepare_libsql_driver
+
+        prepare_libsql_driver()
+        return {
+            "ENGINE": "libsql.db.backends.libsql",
+            "NAME": database_url,
+            "OPTIONS": {"auth_token": auth_token},
+        }
+
+    if auth_token:
+        raise ImproperlyConfigured(
+            "TURSO_DATABASE_URL is required when TURSO_AUTH_TOKEN is set."
+        )
+    if environ.get("VERCEL"):
+        raise ImproperlyConfigured(
+            "Configure TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in Vercel."
+        )
+
+    return {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": base_dir / "db.sqlite3",
+    }
+
+
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+DATABASES = {"default": _get_database_config(os.environ, BASE_DIR)}
 
 
 # Password validation

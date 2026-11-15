@@ -858,13 +858,6 @@ p {
     border-color: var(--pink);
 }
 
-.react-menu {
-    position: absolute;
-    z-index: 2;
-    top: 0.45rem;
-    right: 0.65rem;
-}
-
 .react-menu summary {
     display: grid;
     width: 28px;
@@ -889,9 +882,15 @@ p {
 
 .react-options {
     position: absolute;
-    top: 0;
-    right: calc(100% + 0.35rem);
+    z-index: 5;
+    top: auto;
+    right: 0;
+    bottom: calc(100% + 0.35rem);
+    left: auto;
     display: flex;
+    flex-wrap: wrap;
+    width: max-content;
+    max-width: min(300px, calc(100vw - 2rem));
     gap: 0.2rem;
     padding: 0.35rem;
     background: var(--surface);
@@ -925,15 +924,56 @@ p {
 }
 
 .message-toolbar {
-    grid-area: actions;
+    position: absolute;
+    z-index: 3;
+    top: 0.3rem;
+    right: 0.6rem;
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    min-height: 1.8rem;
+    min-height: 0;
+    padding: 0.2rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.55rem;
+    box-shadow: 0 5px 16px rgb(28 31 38 / 8%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-2px);
+    transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+}
+
+.message:hover .message-toolbar,
+.message:focus-within .message-toolbar {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
 }
 
 .message-toolbar details {
     position: relative;
+}
+
+.message-action {
+    display: grid;
+    min-width: 28px;
+    min-height: 28px;
+    place-items: center;
+    padding: 0 0.4rem;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.45rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.message-action:hover,
+.message-action:focus-visible {
+    color: var(--ink);
+    border-color: var(--pink);
 }
 
 .message-toolbar summary {
@@ -1388,6 +1428,11 @@ p {
         border-color: #404047;
     }
 
+    .compose-box textarea {
+        background: transparent;
+        border: 0;
+    }
+
     .invite-panel {
         background: #3b272e;
         border-color: #60333d;
@@ -1529,19 +1574,25 @@ p {
         font-size: 0.8rem;
     }
 
-    .react-menu {
-        right: auto;
-        left: 0;
+    .message-toolbar {
+        position: static;
+        grid-area: actions;
+        width: max-content;
+        max-width: 100%;
+        min-height: 1.8rem;
+        padding: 0;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: none;
     }
 
     .react-options {
-        top: auto;
         right: auto;
-        bottom: calc(100% + 0.35rem);
         left: 0;
-        width: max-content;
-        flex-wrap: wrap;
-        max-width: calc(100vw - 2rem);
     }
 
     .invite-panel {
@@ -1578,6 +1629,22 @@ p {
 }
 
 @media (hover: none) {
+    .message-toolbar {
+        position: static;
+        grid-area: actions;
+        width: max-content;
+        max-width: 100%;
+        min-height: 1.8rem;
+        padding: 0;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: none;
+    }
+
     .message .react-menu summary,
     .message .text-button {
         opacity: 1;

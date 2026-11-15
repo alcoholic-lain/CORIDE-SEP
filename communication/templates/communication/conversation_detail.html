@@ -978,22 +978,6 @@
         pinnedPanel.hidden = true;
     });
 
-    list.addEventListener("pointerover", (event) => {
-        if (event.pointerType === "touch") return;
-        const article = event.target.closest(".message");
-        if (!article || article.contains(event.relatedTarget)) return;
-        const menu = article.querySelector(".react-menu");
-        if (menu) menu.open = true;
-    });
-
-    list.addEventListener("pointerout", (event) => {
-        if (event.pointerType === "touch") return;
-        const article = event.target.closest(".message");
-        if (!article || article.contains(event.relatedTarget)) return;
-        const menu = article.querySelector(".react-menu");
-        if (menu && !menu.contains(document.activeElement)) menu.open = false;
-    });
-
     input.addEventListener("input", handleTypingInput);
     input.addEventListener("blur", stopTyping);
 

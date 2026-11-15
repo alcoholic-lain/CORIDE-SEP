@@ -1,6 +1,7 @@
 {% extends "communication/base.html" %}
 
 {% block title %}{{ conversation.title|default:"Chat" }}{% endblock %}
+{% block page_class %} page-chat{% endblock %}
 
 {% block content %}
 <section class="chat-shell">
@@ -9,7 +10,7 @@
             <a class="back-link" href="{% url 'communication:conversation_list' %}">← All chats</a>
             <div class="chat-title-row">
                 <span class="avatar avatar-large" aria-hidden="true">
-                    {% if other_participant %}{{ other_participant.display_label|first|upper }}{% else %}✦{% endif %}
+                    {% if other_participant %}{{ other_participant.display_label|first|upper }}{% else %}?{% endif %}
                 </span>
                 <div>
                     <h1>
@@ -35,14 +36,13 @@
                         <span id="participant-presence-dot" class="presence-dot{% if other_online %} presence-online{% endif %}"></span>
                         <span id="participant-presence">{% if other_online %}Online{% else %}Offline{% endif %}</span>
                     </p>
-                    <p id="typing-indicator" class="typing-indicator" aria-live="polite" hidden></p>
                 </div>
             </div>
         </div>
         <div class="chat-header-actions">
-            <button id="message-search-toggle" class="icon-button" type="button" aria-label="Search messages" title="Search messages">⌕</button>
+            <button id="message-search-toggle" class="icon-button" type="button" aria-label="Search messages" title="Search messages">Search</button>
             <button id="pinned-toggle" class="icon-button" type="button" aria-label="Show pinned messages" title="Pinned messages">
-                📌 <span id="pinned-count">{{ pinned_messages|length }}</span>
+                Pins <span id="pinned-count">{{ pinned_messages|length }}</span>
             </button>
             <span id="chat-status" class="status {% if conversation.is_open %}status-open{% else %}status-closed{% endif %}">
                 {% if conversation.is_open %}Active{% else %}Closed{% endif %}
@@ -103,7 +103,6 @@
                 data-sender-id="{{ message.sender_participant_id }}"
                 data-sent-at="{{ message.sent_at|date:'c' }}"
                 data-pinned="{% if message.pinned_at %}true{% else %}false{% endif %}"
-                data-reaction-url="{% url 'communication:message_reaction' message.id %}"
                 {% if message.sender_participant_id == participant.id and not message.is_deleted %}data-edit-url="{% url 'communication:message_edit' message.id %}" data-delete-url="{% url 'communication:message_delete' message.id %}"{% endif %}
                 {% if not message.is_deleted %}data-pin-url="{% url 'communication:message_pin' message.id %}"{% endif %}
             >
@@ -114,7 +113,7 @@
                     <strong>{{ message.sender_participant.display_label }}</strong>
                     <time datetime="{{ message.sent_at|date:'c' }}">{{ message.sent_at|date:"M j, H:i" }}</time>
                     <span class="edited-label" {% if not message.edited_at %}hidden{% endif %}>edited</span>
-                    {% if message.pinned_at %}<span class="pinned-mark" title="Pinned message">📌</span>{% endif %}
+                    {% if message.pinned_at %}<span class="pinned-mark">Pinned</span>{% endif %}
                     {% if message.sender_participant_id == participant.id %}
                         <span class="read-status" data-read-status-for="{{ message.id }}">
                             {% if message.read_at %}Seen{% else %}Sent{% endif %}
@@ -136,41 +135,14 @@
                             {% if message.attachment_content_type|slice:":6" == "image/" %}
                                 <img class="attachment-image" src="{% url 'communication:message_attachment' message.id %}" alt="{{ message.attachment_name }}" loading="lazy">
                             {% else %}
-                                <span class="file-card"><span aria-hidden="true">📄</span><strong>{{ message.attachment_name }}</strong><small>{{ message.attachment_size|filesizeformat }}</small></span>
+                                <span class="file-card"><span class="file-icon" aria-hidden="true"></span><strong>{{ message.attachment_name }}</strong><small>{{ message.attachment_size|filesizeformat }}</small></span>
                             {% endif %}
                         </a>
                     </div>
                 {% endif %}
-                <div class="message-reaction-row" data-reactions-for="{{ message.id }}"{% if not message.reaction_summaries %} hidden{% endif %}>
-                    <div class="message-reactions">
-                        {% for reaction in message.reaction_summaries %}
-                            <button
-                                class="reaction-chip{% if reaction.reacted %} reaction-mine{% endif %}"
-                                type="button"
-                                data-reaction-emoji="{{ reaction.emoji }}"
-                                aria-label="{{ reaction.count }} {{ reaction.emoji }} reactions"
-                            >
-                                {{ reaction.emoji }} <span>{{ reaction.count }}</span>
-                            </button>
-                        {% endfor %}
-                    </div>
-                </div>
                 {% if not message.is_deleted %}
                     <div class="message-toolbar">
-                        <details class="react-menu">
-                            <summary aria-label="Add reaction" title="Add reaction">☺</summary>
-                            <div class="react-options">
-                                {% for emoji, label in reaction_choices %}
-                                    <button
-                                        type="button"
-                                        data-reaction-emoji="{{ emoji }}"
-                                        title="{{ label }}"
-                                        aria-label="React with {{ label }}"
-                                    >{{ emoji }}</button>
-                                {% endfor %}
-                            </div>
-                        </details>
-                        <button class="message-action reply-message" type="button" aria-label="Reply" title="Reply">↩</button>
+                        <button class="message-action reply-message" type="button">Reply</button>
                         <details class="message-more">
                             <summary aria-label="More message actions" title="More message actions">•••</summary>
                             <div class="message-more-options">
@@ -188,11 +160,14 @@
             </article>
         {% empty %}
             <div id="empty-messages" class="empty-chat">
-                <span class="empty-icon" aria-hidden="true">✦</span>
                 <strong>Say hello</strong>
                 <p>Your messages will appear here.</p>
             </div>
         {% endfor %}
+    </div>
+    <div id="typing-indicator" class="typing-indicator" role="status" aria-live="polite" hidden>
+        <span class="typing-indicator-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span id="typing-indicator-label"></span>
     </div>
 
     <form
@@ -213,17 +188,9 @@
             <button id="reply-composer-close" class="icon-button" type="button" aria-label="Cancel reply">×</button>
         </div>
         <div class="compose-box">
-            <label class="attachment-button" for="id_attachment" aria-label="Attach a file" title="Attach a file">＋</label>
+            <label class="attachment-button" for="id_attachment" aria-label="Attach a file" title="Attach a file">+</label>
             {{ message_form.attachment }}
             {{ message_form.content }}
-            <details class="emoji-picker">
-                <summary aria-label="Choose emoji" title="Choose emoji">☺</summary>
-                <div class="emoji-options">
-                    {% for emoji, label in reaction_choices %}
-                        <button type="button" data-compose-emoji="{{ emoji }}" title="{{ label }}">{{ emoji }}</button>
-                    {% endfor %}
-                </div>
-            </details>
             <div id="attachment-preview" class="attachment-preview" hidden>
                 <span id="attachment-preview-name"></span>
                 <button id="attachment-clear" type="button" aria-label="Remove attachment">×</button>
@@ -240,24 +207,8 @@
 </section>
 
 <template id="message-controls-template">
-    <div class="message-reaction-row">
-        <div class="message-reactions"></div>
-    </div>
     <div class="message-toolbar">
-        <details class="react-menu">
-            <summary aria-label="Add reaction" title="Add reaction">☺</summary>
-            <div class="react-options">
-                {% for emoji, label in reaction_choices %}
-                    <button
-                        type="button"
-                        data-reaction-emoji="{{ emoji }}"
-                        title="{{ label }}"
-                        aria-label="React with {{ label }}"
-                    >{{ emoji }}</button>
-                {% endfor %}
-            </div>
-        </details>
-        <button class="message-action reply-message" type="button" aria-label="Reply" title="Reply">↩</button>
+        <button class="message-action reply-message" type="button">Reply</button>
         <details class="message-more">
             <summary aria-label="More message actions" title="More message actions">•••</summary>
             <div class="message-more-options">
@@ -276,6 +227,7 @@
     const errorBox = document.getElementById("send-error");
     const status = document.getElementById("chat-status");
     const typingIndicator = document.getElementById("typing-indicator");
+    const typingIndicatorLabel = document.getElementById("typing-indicator-label");
     const presenceLabel = document.getElementById("participant-presence");
     const presenceDot = document.getElementById("participant-presence-dot");
     const input = form.elements.content;
@@ -296,32 +248,6 @@
     let typingTimer;
     let lastTypingSentAt = 0;
     let typingQueue = Promise.resolve();
-
-    function renderReactions(article, reactions) {
-        const container = article.querySelector(".message-reactions");
-        if (!container) return;
-        const row = container.closest(".message-reaction-row");
-        if (row) row.hidden = reactions.length === 0;
-        const signature = reactions
-            .map((reaction) => `${reaction.emoji}:${reaction.count}:${reaction.reacted}`)
-            .join("|");
-        if (container.dataset.signature === signature) return;
-        container.dataset.signature = signature;
-        container.replaceChildren();
-
-        reactions.forEach((reaction) => {
-            const button = document.createElement("button");
-            button.className = `reaction-chip${reaction.reacted ? " reaction-mine" : ""}`;
-            button.type = "button";
-            button.dataset.reactionEmoji = reaction.emoji;
-            button.textContent = `${reaction.emoji} ${reaction.count}`;
-            button.setAttribute(
-                "aria-label",
-                `${reaction.count} ${reaction.emoji} reactions`
-            );
-            container.append(button);
-        });
-    }
 
     function renderAttachment(article, attachment) {
         if (!attachment) return;
@@ -344,8 +270,8 @@
             const card = document.createElement("span");
             card.className = "file-card";
             const icon = document.createElement("span");
+            icon.className = "file-icon";
             icon.setAttribute("aria-hidden", "true");
-            icon.textContent = "📄";
             const name = document.createElement("strong");
             name.textContent = attachment.name;
             const size = document.createElement("small");
@@ -415,8 +341,7 @@
             if (pinned && !mark) {
                 const badge = document.createElement("span");
                 badge.className = "pinned-mark";
-                badge.title = "Pinned message";
-                badge.textContent = "📌";
+                badge.textContent = "Pinned";
                 article.querySelector(".message-meta").append(badge);
             } else if (!pinned && mark) {
                 mark.remove();
@@ -498,7 +423,6 @@
             article.querySelector(".message-toolbar")?.remove();
             article.dataset.pinned = "false";
             article.classList.add("message-deleted");
-            renderReactions(article, []);
             return;
         }
 
@@ -618,7 +542,7 @@
             if (!response.ok) throw new Error("Typing status update failed.");
         }).catch(() => {
             typingIndicator.hidden = false;
-            typingIndicator.textContent = "Typing status unavailable.";
+            typingIndicatorLabel.textContent = "Typing status unavailable.";
         });
     }
 
@@ -627,6 +551,11 @@
         if (!typingActive) return;
         typingActive = false;
         sendTypingStatus(false);
+    }
+
+    function resizeComposer() {
+        input.style.height = "42px";
+        input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
     }
 
     function handleTypingInput() {
@@ -654,7 +583,6 @@
         article.dataset.senderId = message.sender_id;
         article.dataset.sentAt = message.sent_at;
         article.dataset.pinned = String(message.pinned);
-        if (message.reaction_url) article.dataset.reactionUrl = message.reaction_url;
         if (message.delete_url) article.dataset.deleteUrl = message.delete_url;
         if (message.edit_url) article.dataset.editUrl = message.edit_url;
         if (message.pin_url) article.dataset.pinUrl = message.pin_url;
@@ -685,8 +613,7 @@
         if (message.pinned) {
             const pinned = document.createElement("span");
             pinned.className = "pinned-mark";
-            pinned.title = "Pinned message";
-            pinned.textContent = "📌";
+            pinned.textContent = "Pinned";
             meta.append(pinned);
         }
         if (message.is_mine) {
@@ -708,7 +635,6 @@
             article.append(
                 document.getElementById("message-controls-template").content.cloneNode(true)
             );
-            renderReactions(article, []);
             const controls = article.querySelector(".message-toolbar");
             if (!message.edit_url) controls.querySelector(".edit-message").remove();
             if (!message.delete_url) controls.querySelector(".delete-message").remove();
@@ -744,12 +670,6 @@
                     message
                 );
             });
-            list.querySelectorAll(".message").forEach((article) => {
-                renderReactions(
-                    article,
-                    data.reactions[article.dataset.messageId] || []
-                );
-            });
             renderPinnedMessages(data.pinned_ids);
             applyGrouping();
             applyMessageSearch();
@@ -766,7 +686,7 @@
                 presenceDot.classList.toggle("presence-online", data.other_online);
             }
             typingIndicator.hidden = !data.typing;
-            typingIndicator.textContent = data.typing
+            typingIndicatorLabel.textContent = data.typing
                 ? `${data.typing} is typing...`
                 : "";
             if (data.has_second_participant) {
@@ -810,6 +730,7 @@
                 return;
             }
             form.reset();
+            resizeComposer();
             clearReply();
             attachmentPreview.hidden = true;
             document.getElementById("attachment-preview-name").textContent = "";
@@ -830,37 +751,6 @@
                 target.classList.add("message-highlight");
                 window.setTimeout(() => target.classList.remove("message-highlight"), 1400);
                 pinnedPanel.hidden = true;
-            }
-            return;
-        }
-
-        const reactionButton = event.target.closest("[data-reaction-emoji]");
-        if (reactionButton) {
-            const article = reactionButton.closest(".message");
-            const body = new URLSearchParams({
-                emoji: reactionButton.dataset.reactionEmoji
-            });
-            const token = form.elements.csrfmiddlewaretoken.value;
-            try {
-                const response = await fetch(article.dataset.reactionUrl, {
-                    method: "POST",
-                    headers: {
-                        "X-CSRFToken": token,
-                        "Content-Type": "application/x-www-form-urlencoded",
-                        "Accept": "application/json"
-                    },
-                    body
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    errorBox.textContent = data.error || "Reaction could not be saved.";
-                    return;
-                }
-                renderReactions(article, data.reactions);
-                const menu = reactionButton.closest(".react-menu");
-                if (menu) menu.open = false;
-            } catch {
-                errorBox.textContent = "Reaction could not be saved. Please try again.";
             }
             return;
         }
@@ -925,17 +815,6 @@
         }
     });
 
-    form.addEventListener("click", (event) => {
-        const emojiButton = event.target.closest("[data-compose-emoji]");
-        if (!emojiButton) return;
-        const start = input.selectionStart;
-        const end = input.selectionEnd;
-        input.setRangeText(emojiButton.dataset.composeEmoji, start, end, "end");
-        input.focus();
-        emojiButton.closest(".emoji-picker").open = false;
-        handleTypingInput();
-    });
-
     document.getElementById("reply-composer-close").addEventListener("click", clearReply);
 
     const attachmentClear = document.getElementById("attachment-clear");
@@ -980,7 +859,10 @@
         pinnedPanel.hidden = true;
     });
 
-    input.addEventListener("input", handleTypingInput);
+    input.addEventListener("input", () => {
+        resizeComposer();
+        handleTypingInput();
+    });
     input.addEventListener("blur", stopTyping);
 
     const inviteButton = document.getElementById("copy-invite");

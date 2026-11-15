@@ -401,14 +401,6 @@ def conversation_detail(request, conversation_id):
             "reply_to__sender_participant",
         )
     )
-    reaction_summaries = _reaction_summaries(
-        MessageReaction.objects.filter(
-            message_id__in=[message.pk for message in messages]
-        ),
-        participant,
-    )
-    for message in messages:
-        message.reaction_summaries = reaction_summaries.get(message.pk, [])
     message_form = MessageForm()
     if not conversation.is_open:
         message_form.fields["content"].disabled = True
@@ -439,7 +431,6 @@ def conversation_detail(request, conversation_id):
             "other_online": _is_online(other_participant),
             "invite_url": invite_url,
             "latest_message_id": messages[-1].pk if messages else 0,
-            "reaction_choices": MessageReaction.Emoji.choices,
             "pinned_messages": [
                 message for message in messages if message.pinned_at is not None
             ],

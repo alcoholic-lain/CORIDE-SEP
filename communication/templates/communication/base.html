@@ -31,7 +31,7 @@
             {% endif %}
         </nav>
     </header>
-    <main class="page">
+    <main class="page{% block page_class %}{% endblock %}">
         {% if messages %}
             {% for message in messages %}
                 <p class="notice">{{ message }}</p>

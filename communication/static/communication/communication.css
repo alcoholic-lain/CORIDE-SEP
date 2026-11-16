@@ -18,6 +18,80 @@
     --pinned-message: #fff4f5;
 }
 
+.chat-theme {
+    color-scheme: dark;
+    color: #f2f3f5;
+    background: #1e1f22;
+    --page: #1e1f22;
+    --surface: #2b2d31;
+    --ink: #f2f3f5;
+    --muted: #b5bac1;
+    --line: #3f4147;
+    --pink: #5865f2;
+    --coride: #5865f2;
+    --soft-pink: #3b3d45;
+    --shadow: 0 18px 48px rgb(0 0 0 / 24%);
+    --message-hover: #35373c;
+    --pinned-message: #34343b;
+}
+
+.chat-theme .site-header {
+    background: #232428;
+    border-color: #1b1c1f;
+}
+
+.chat-theme .page,
+.chat-theme .chat-shell,
+.chat-theme .form-card {
+    background: #2b2d31;
+    border-color: #1b1c1f;
+}
+
+.chat-theme .chat-heading,
+.chat-theme .message-list,
+.chat-theme .typing-indicator,
+.chat-theme .message-search,
+.chat-theme .pinned-panel {
+    background: #313338;
+}
+
+.chat-theme .message-list {
+    color: var(--ink);
+}
+
+.chat-theme .invite-panel {
+    background: #232428;
+    border-color: #1b1c1f;
+}
+
+.chat-theme .invite-type {
+    color: #c9cdfa;
+    background: #353a72;
+}
+
+.chat-theme .invite-copy .button-secondary,
+.chat-theme .voice-call-actions .button-secondary {
+    color: var(--ink);
+    background: #3f4147;
+}
+
+.chat-theme .invite-copy .button-secondary:hover,
+.chat-theme .voice-call-actions .button-secondary:hover {
+    background: #4a4d55;
+}
+
+.chat-theme .chat-footnote {
+    color: var(--muted);
+}
+
+.chat-theme .send-form textarea,
+.chat-theme .message-search input,
+.chat-theme .invite-copy input {
+    color: var(--ink);
+    background: #383a40;
+    border-color: #1b1c1f;
+}
+
 * {
     box-sizing: border-box;
 }
@@ -220,77 +294,6 @@ button.button {
 .guest-start .errorlist,
 .guest-start .form-error {
     grid-column: 1 / -1;
-}
-
-.guest-picker {
-    display: grid;
-    gap: 0.55rem;
-}
-
-.guest-picker label {
-    font-weight: 700;
-}
-
-.chat-type-field {
-    min-width: 0;
-    margin: 0;
-    padding: 0;
-    border: 0;
-}
-
-.chat-type-field legend {
-    font-weight: 700;
-}
-
-.chat-type-options {
-    display: grid;
-    gap: 0.35rem;
-    margin: 0.35rem 0 0;
-    padding: 0;
-    list-style: none;
-}
-
-.chat-type-options label {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    cursor: pointer;
-}
-
-.chat-type-options input[type="radio"] {
-    width: auto;
-    min-height: 0;
-    margin: 0;
-    padding: 0;
-    accent-color: var(--coride);
-}
-
-.guest-choice-list {
-    display: grid;
-    gap: 0.35rem;
-    max-height: 250px;
-    margin: 0;
-    padding: 0.65rem;
-    overflow-y: auto;
-    list-style: none;
-    border: 1px solid #d4d0cc;
-    border-radius: 0.7rem;
-    background: var(--surface);
-}
-
-.guest-choice-list li label {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.35rem;
-    cursor: pointer;
-}
-
-.guest-choice-list input[type="checkbox"] {
-    width: auto;
-    min-height: 0;
-    margin: 0;
-    accent-color: var(--coride);
 }
 
 .guest-start + .muted {
@@ -583,6 +586,21 @@ p {
     font-weight: 650;
 }
 
+.call-button {
+    color: #57f287;
+}
+
+.call-button:hover,
+.call-button:focus-visible {
+    color: #fff;
+    background: #248046;
+}
+
+.call-button:disabled {
+    color: var(--muted);
+    cursor: not-allowed;
+}
+
 .icon-button {
     display: inline-grid;
     flex: none;
@@ -793,6 +811,124 @@ p {
     min-height: 0;
     margin: 0;
     font-size: 0.72rem;
+}
+
+.voice-call-panel {
+    flex: none;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    padding: 0.8rem 1rem;
+    background: #232428;
+    border-bottom: 1px solid var(--line);
+}
+
+.voice-call-panel[hidden] {
+    display: none;
+}
+
+.voice-call-copy p,
+.voice-call-participants,
+.voice-call-error {
+    margin: 0.2rem 0 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.voice-call-actions {
+    display: flex;
+    gap: 0.45rem;
+}
+
+.voice-call-actions .button {
+    min-height: 36px;
+    padding: 0.4rem 0.75rem;
+}
+
+.voice-call-actions #voice-call-action {
+    color: #fff;
+    background: #5865f2;
+}
+
+.voice-call-actions #voice-call-action:hover {
+    background: #4752c4;
+}
+
+.voice-call-audio {
+    display: none;
+}
+
+.voice-call-error:empty {
+    display: none;
+}
+
+.join-card .invite-type {
+    display: inline-flex;
+    margin: 0.2rem 0 1.25rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.chat-theme .join-card .muted {
+    line-height: 1.55;
+}
+
+.new-chat-card {
+    max-width: 560px;
+}
+
+.new-chat-card > .muted {
+    margin-bottom: 1.4rem;
+}
+
+.invite-options {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.invite-options .invite-option {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0;
+    padding: 1rem;
+    color: var(--ink);
+    text-align: left;
+    background: #313338;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: border-color 140ms ease, background 140ms ease;
+}
+
+.invite-options .invite-option:hover,
+.invite-options .invite-option:focus-visible {
+    background: #383a40;
+    border-color: #5865f2;
+}
+
+.invite-option-copy {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.invite-option-copy strong {
+    font-size: 0.98rem;
+}
+
+.invite-option-copy > span {
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.invite-option-arrow {
+    color: #b5bac1;
+    font-size: 1.2rem;
 }
 
 .message-list {
@@ -1806,8 +1942,13 @@ p {
     }
 
     .invite-copy {
-        align-items: stretch;
-        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .voice-call-panel {
+        grid-template-columns: 1fr;
+        gap: 0.4rem;
+        padding: 0.75rem 0.8rem;
     }
 
     .send-form {

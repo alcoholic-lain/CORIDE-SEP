@@ -1,3 +1,4 @@
+import json
 import tempfile
 from datetime import timedelta
 
@@ -18,6 +19,8 @@ from .models import (
     Message,
     MessageReaction,
     Review,
+    VoiceCall,
+    VoiceCallSignal,
 )
 from .moderation import is_blocked
 from .services import mark_trip_completed, open_conversation
@@ -707,6 +710,131 @@ class ConversationTests(CommunicationTestCase):
         self.assertFalse(Message.objects.exists())
 
 
+class VoiceCallTests(CommunicationTestCase):
+    def setUp(self):
+        super().setUp()
+        self.owner = Client()
+        self.owner.force_login(self.passenger)
+        self.guest = Client()
+        self.guest.force_login(self.driver)
+        self.action_url = reverse(
+            "communication:voice_call_action",
+            args=[self.conversation.pk],
+        )
+        self.state_url = reverse(
+            "communication:voice_call_state",
+            args=[self.conversation.pk],
+        )
+
+    def post_action(self, client, action, **data):
+        return client.post(
+            self.action_url,
+            json.dumps({"action": action, **data}),
+            content_type="application/json",
+        )
+
+    def test_participants_can_start_join_exchange_signals_and_leave(self):
+        started = self.post_action(self.owner, "start")
+        self.assertEqual(started.status_code, 201)
+        call = VoiceCall.objects.get(conversation=self.conversation)
+        self.assertEqual(
+            started.json()["call"]["participants"][0]["id"],
+            self.passenger_participant.pk,
+        )
+
+        self.assertEqual(
+            self.guest.get(self.state_url).json()["call"]["participants"][0]["id"],
+            self.passenger_participant.pk,
+        )
+        joined = self.post_action(self.guest, "join")
+        self.assertEqual(joined.status_code, 200)
+        self.assertEqual(call.participants.count(), 2)
+
+        signal = self.post_action(
+            self.owner,
+            "signal",
+            recipient=self.driver_participant.pk,
+            type="offer",
+            payload={"type": "offer", "sdp": "test-sdp"},
+        )
+        self.assertEqual(signal.status_code, 201)
+        self.assertTrue(
+            VoiceCallSignal.objects.filter(
+                call=call,
+                sender=self.passenger_participant,
+                recipient=self.driver_participant,
+            ).exists()
+        )
+
+        synced = self.post_action(self.guest, "sync", after=0)
+        self.assertEqual(synced.status_code, 200)
+        self.assertEqual(synced.json()["signals"][0]["payload"]["sdp"], "test-sdp")
+
+        self.assertEqual(self.post_action(self.owner, "leave").status_code, 200)
+        call.refresh_from_db()
+        self.assertIsNone(call.ended_at)
+        self.assertEqual(self.post_action(self.guest, "leave").status_code, 200)
+        call.refresh_from_db()
+        self.assertIsNotNone(call.ended_at)
+
+    def test_call_actions_require_a_member_and_validate_signals(self):
+        outsider = Client()
+        outsider.force_login(self.outsider)
+        outsider_response = outsider.get(self.state_url)
+        self.assertEqual(outsider_response.status_code, 403)
+
+        self.assertEqual(
+            self.post_action(self.owner, "start").status_code,
+            201,
+        )
+        duplicate = self.post_action(self.guest, "start")
+        self.assertEqual(duplicate.status_code, 409)
+
+        invalid_signal = self.post_action(
+            self.owner,
+            "signal",
+            recipient=self.driver_participant.pk,
+            type="offer",
+            payload={"sdp": "not joined"},
+        )
+        self.assertEqual(invalid_signal.status_code, 409)
+        malformed = self.owner.post(
+            self.action_url,
+            "{",
+            content_type="application/json",
+        )
+        self.assertEqual(malformed.status_code, 400)
+
+    def test_group_chats_do_not_offer_voice_calls(self):
+        group = Conversation.objects.create(
+            participant_one=self.passenger_participant,
+            chat_type=Conversation.ChatType.GROUP,
+        )
+        group.participants.add(
+            self.passenger_participant,
+            self.driver_participant,
+        )
+        group_action_url = reverse(
+            "communication:voice_call_action",
+            args=[group.pk],
+        )
+        group_state_url = reverse(
+            "communication:voice_call_state",
+            args=[group.pk],
+        )
+
+        state = self.owner.get(group_state_url)
+        self.assertEqual(state.status_code, 200)
+        self.assertFalse(state.json()["supported"])
+        start = self.owner.post(
+            group_action_url,
+            json.dumps({"action": "start"}),
+            content_type="application/json",
+        )
+        self.assertEqual(start.status_code, 409)
+        self.assertFalse(VoiceCall.objects.filter(conversation=group).exists())
+
+
 class GuestConversationTests(TestCase):
     def setUp(self):
         self.owner = Client()
@@ -717,38 +845,26 @@ class GuestConversationTests(TestCase):
             {"display_name": name},
         )
 
-    def test_new_chat_picker_lists_only_unique_contacts_from_existing_chats(self):
+    def test_new_chat_invite_page_has_no_picker_or_optional_fields(self):
         self.start_guest(self.owner, "Owner")
-        first_guest = Client()
-        self.start_guest(first_guest, "Sam")
-        duplicate_guest = Client()
-        self.start_guest(duplicate_guest, "sAM")
-        unrelated_guest = Client()
-        self.start_guest(unrelated_guest, "Lee")
-        owner_participant = CommunicationParticipant.objects.get(
-            session_key=self.owner.session.session_key
-        )
-        first_participant = CommunicationParticipant.objects.get(
-            session_key=first_guest.session.session_key
-        )
-        existing_chat = Conversation.objects.create(
-            participant_one=owner_participant,
-            participant_two=first_participant,
-        )
-        existing_chat.participants.add(owner_participant, first_participant)
-
         response = self.owner.get(reverse("communication:create_conversation"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Private chat")
         self.assertContains(response, "Group chat")
-        self.assertContains(response, "Only people from your existing chats")
-        choices = list(response.context["guest_options"])
-        self.assertEqual(len(choices), 1)
-        self.assertEqual(choices[0].display_name.casefold(), "sam")
+        self.assertNotContains(response, "Chat name")
+        self.assertNotContains(response, "First message")
+        self.assertNotContains(response, "Choose chat contacts")
+        self.assertEqual(
+            list(response.context["form"].fields),
+            ["chat_type"],
+        )
 
-    def test_new_chat_rejects_an_unrelated_guest_even_if_submitted_manually(self):
+    def test_new_chat_does_not_add_submitted_contacts_to_an_invite(self):
         self.start_guest(self.owner, "Owner")
+        owner = CommunicationParticipant.objects.get(
+            session_key=self.owner.session.session_key
+        )
         unrelated_guest = Client()
         self.start_guest(unrelated_guest, "Unrelated")
         unrelated_participant = CommunicationParticipant.objects.get(
@@ -758,105 +874,53 @@ class GuestConversationTests(TestCase):
         response = self.owner.post(
             reverse("communication:create_conversation"),
             {
-                "title": "Unrelated chat",
+                "chat_type": "PRIVATE",
                 "guests": [str(unrelated_participant.pk)],
             },
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("guests", response.context["form"].errors)
-        self.assertFalse(Conversation.objects.filter(title="Unrelated chat").exists())
-
-    def test_creator_can_add_multiple_guests_to_a_group_chat(self):
-        self.start_guest(self.owner, "Owner")
-        owner_participant = CommunicationParticipant.objects.get(
-            session_key=self.owner.session.session_key
+        self.assertEqual(response.status_code, 302)
+        conversation = Conversation.objects.get()
+        self.assertEqual(conversation.participant_one, owner)
+        self.assertIsNone(conversation.participant_two_id)
+        self.assertEqual(conversation.participants.count(), 1)
+        self.assertFalse(
+            conversation.participants.filter(pk=unrelated_participant.pk).exists()
         )
+
+    def test_creator_can_share_a_group_invite_with_multiple_guests(self):
+        self.start_guest(self.owner, "Owner")
         invited_clients = [Client(), Client()]
         for client, name in zip(invited_clients, ("Sam", "Lee")):
             self.start_guest(client, name)
-        invited_participants = [
-            CommunicationParticipant.objects.get(
-                session_key=client.session.session_key
-            )
-            for client in invited_clients
-        ]
-        for invited_participant in invited_participants:
-            existing_chat = Conversation.objects.create(
-                participant_one=owner_participant,
-                participant_two=invited_participant,
-            )
-            existing_chat.participants.add(owner_participant, invited_participant)
 
         response = self.owner.post(
             reverse("communication:create_conversation"),
-            {
-                "chat_type": "group",
-                "title": "Campus group",
-                "initial_message": "Welcome everyone",
-                "guests": [str(participant.pk) for participant in invited_participants],
-            },
+            {"chat_type": "GROUP"},
         )
 
-        conversation = Conversation.objects.get(title="Campus group")
-        opening_message = conversation.messages.get()
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(conversation.participants.count(), 3)
-        self.assertEqual(
-            opening_message.content,
-            "Welcome everyone",
+        conversation = Conversation.objects.get(chat_type=Conversation.ChatType.GROUP)
+        self.assertEqual(conversation.participants.count(), 1)
+        join_url = reverse(
+            "communication:join_conversation",
+            args=[conversation.invite_code],
         )
         first_client, second_client = invited_clients
+        for client in (first_client, second_client):
+            self.assertContains(client.get(join_url), "Join chat")
+            joined = client.post(join_url)
+            self.assertRedirects(
+                joined,
+                reverse("communication:conversation_detail", args=[conversation.pk]),
+                fetch_redirect_response=False,
+            )
+        self.assertEqual(conversation.participants.count(), 3)
         detail = first_client.get(
-            reverse(
-                "communication:conversation_detail",
-                args=[conversation.pk],
-            )
+            reverse("communication:conversation_detail", args=[conversation.pk])
         )
         self.assertEqual(detail.status_code, 200)
-        self.assertContains(detail, "Welcome everyone")
         self.assertContains(detail, "Private group chat")
-        inbox = first_client.get(reverse("communication:conversation_list"))
-        first_chat = next(
-            chat
-            for chat in inbox.context["conversations"]
-            if chat.pk == conversation.pk
-        )
-        self.assertEqual(first_chat.unread_count, 0)
-        self.assertContains(inbox, "Campus group")
-
-        inbox = second_client.get(reverse("communication:conversation_list"))
-        second_chat = next(
-            chat
-            for chat in inbox.context["conversations"]
-            if chat.pk == conversation.pk
-        )
-        self.assertEqual(second_chat.unread_count, 1)
-        detail = second_client.get(
-            reverse(
-                "communication:conversation_detail",
-                args=[conversation.pk],
-            )
-        )
-        self.assertEqual(detail.status_code, 200)
-        inbox = second_client.get(reverse("communication:conversation_list"))
-        second_chat = next(
-            chat
-            for chat in inbox.context["conversations"]
-            if chat.pk == conversation.pk
-        )
-        self.assertEqual(second_chat.unread_count, 0)
-        reply = first_client.post(
-            reverse("communication:send_message", args=[conversation.pk]),
-            {"content": "Group reply"},
-        )
-        self.assertEqual(reply.status_code, 201)
-        poll = second_client.get(
-            reverse("communication:poll_messages", args=[conversation.pk]),
-            {"after": opening_message.pk},
-        )
-        self.assertEqual(poll.status_code, 200)
-        self.assertEqual(poll.json()["messages"][0]["content"], "Group reply")
 
         outsider = Client()
         self.start_guest(outsider, "Outsider")
@@ -868,61 +932,36 @@ class GuestConversationTests(TestCase):
         )
         self.assertEqual(denied.status_code, 403)
 
-    def test_chat_type_requires_one_contact_for_private_or_two_for_group(self):
+    def test_private_and_group_invites_need_no_contact_selection(self):
         self.start_guest(self.owner, "Owner")
-        owner_participant = CommunicationParticipant.objects.get(
-            session_key=self.owner.session.session_key
-        )
-        invited_clients = [Client(), Client()]
-        for client, name in zip(invited_clients, ("Sam", "Lee")):
-            self.start_guest(client, name)
-        invited_participants = [
-            CommunicationParticipant.objects.get(
-                session_key=client.session.session_key
-            )
-            for client in invited_clients
-        ]
-        for invited_participant in invited_participants:
-            existing_chat = Conversation.objects.create(
-                participant_one=owner_participant,
-                participant_two=invited_participant,
-            )
-            existing_chat.participants.add(owner_participant, invited_participant)
-
-        one_person_group = self.owner.post(
+        private_response = self.owner.post(
             reverse("communication:create_conversation"),
-            {
-                "chat_type": "group",
-                "guests": [str(invited_participants[0].pk)],
-            },
+            {"chat_type": "PRIVATE"},
         )
-        two_person_private = self.owner.post(
+        group_response = self.owner.post(
             reverse("communication:create_conversation"),
-            {
-                "chat_type": "private",
-                "guests": [str(participant.pk) for participant in invited_participants],
-            },
+            {"chat_type": "GROUP"},
         )
 
-        self.assertIn("guests", one_person_group.context["form"].errors)
-        self.assertIn("guests", two_person_private.context["form"].errors)
+        self.assertEqual(private_response.status_code, 302)
+        self.assertEqual(group_response.status_code, 302)
         self.assertEqual(Conversation.objects.count(), 2)
-
-    def test_new_chat_picker_rejects_the_current_guest(self):
-        self.start_guest(self.owner, "Owner")
-        owner = CommunicationParticipant.objects.get(
-            session_key=self.owner.session.session_key
+        self.assertEqual(
+            list(
+                Conversation.objects.order_by("chat_type").values_list(
+                    "chat_type",
+                    flat=True,
+                )
+            ),
+            ["GROUP", "PRIVATE"],
         )
-
-        response = self.owner.post(
-            reverse("communication:create_conversation"),
-            {"title": "Invalid self-chat", "guests": [str(owner.pk)]},
+        self.assertEqual(
+            [
+                conversation.participants.count()
+                for conversation in Conversation.objects.all()
+            ],
+            [1, 1],
         )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.context["form"].is_valid())
-        self.assertTrue(response.context["form"].errors["guests"])
-        self.assertFalse(Conversation.objects.filter(title="Invalid self-chat").exists())
 
     def test_guest_can_create_invite_chat_send_and_receive_messages(self):
         response = self.start_guest(self.owner, "Alex")
@@ -937,16 +976,13 @@ class GuestConversationTests(TestCase):
 
         response = self.owner.post(
             reverse("communication:create_conversation"),
-            {
-                "title": "Campus pickup",
-                "initial_message": "Are you on your way?",
-            },
+            {"chat_type": "PRIVATE"},
         )
-        conversation = Conversation.objects.get(title="Campus pickup")
+        conversation = Conversation.objects.get()
         self.assertEqual(response.status_code, 302)
         self.assertEqual(conversation.participant_one, owner)
         self.assertIsNone(conversation.participant_two)
-        opening_message = Message.objects.get(conversation=conversation)
+        self.assertFalse(Message.objects.filter(conversation=conversation).exists())
 
         response = self.owner.get(
             reverse(
@@ -955,7 +991,7 @@ class GuestConversationTests(TestCase):
             )
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Are you on your way?")
+        self.assertContains(response, "Copy invite link")
         self.assertContains(response, conversation.invite_code)
 
         invited_client = Client()
@@ -963,7 +999,7 @@ class GuestConversationTests(TestCase):
             "communication:join_conversation",
             args=[conversation.invite_code],
         )
-        self.assertContains(invited_client.get(join_url), "Join as a guest")
+        self.assertContains(invited_client.get(join_url), "Your name")
         response = invited_client.post(join_url, {"display_name": "Sam"})
         self.assertRedirects(
             response,
@@ -982,8 +1018,6 @@ class GuestConversationTests(TestCase):
         conversation.refresh_from_db()
         invited_participant = conversation.participant_two
         self.assertEqual(invited_participant.display_name, "Sam")
-        opening_message.refresh_from_db()
-        self.assertIsNotNone(opening_message.read_at)
 
         response = invited_client.post(
             reverse("communication:send_message", args=[conversation.pk]),
@@ -992,20 +1026,19 @@ class GuestConversationTests(TestCase):
         self.assertEqual(response.status_code, 201)
         response = self.owner.get(
             reverse("communication:poll_messages", args=[conversation.pk]),
-            {"after": 1},
+            {"after": 0},
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["messages"][0]["content"], "On my way")
         self.assertFalse(response.json()["messages"][0]["is_mine"])
-        self.assertIn(opening_message.pk, response.json()["read_ids"])
 
     def test_guest_sessions_are_isolated_and_invite_accepts_only_one_person(self):
         self.start_guest(self.owner, "Owner")
         self.owner.post(
             reverse("communication:create_conversation"),
-            {"title": "Private ride"},
+            {"chat_type": "PRIVATE"},
         )
-        conversation = Conversation.objects.get(title="Private ride")
+        conversation = Conversation.objects.get()
         join_url = reverse(
             "communication:join_conversation",
             args=[conversation.invite_code],
@@ -1112,9 +1145,9 @@ class GuestConversationTests(TestCase):
         self.start_guest(self.owner, "Temporary guest")
         self.owner.post(
             reverse("communication:create_conversation"),
-            {"title": "Temporary chat"},
+            {"chat_type": "PRIVATE"},
         )
-        conversation = Conversation.objects.get(title="Temporary chat")
+        conversation = Conversation.objects.get()
 
         with override_settings(COMMUNICATION_GUEST_MODE=False):
             response = self.owner.get(

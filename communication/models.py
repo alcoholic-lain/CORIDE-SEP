@@ -74,6 +74,10 @@ class CommunicationParticipant(models.Model):
 
 
 class Conversation(models.Model):
+    class ChatType(models.TextChoices):
+        PRIVATE = "PRIVATE", "Private chat"
+        GROUP = "GROUP", "Group chat"
+
     class CloseReason(models.TextChoices):
         CANCELLED = "CANCELLED", "Reservation cancelled"
         REFUSED = "REFUSED", "Reservation refused"
@@ -118,6 +122,11 @@ class Conversation(models.Model):
         through="ConversationMembership",
         related_name="conversations",
         blank=True,
+    )
+    chat_type = models.CharField(
+        max_length=8,
+        choices=ChatType.choices,
+        default=ChatType.PRIVATE,
     )
     title = models.CharField(max_length=120, blank=True, default="")
     invite_code = models.CharField(
@@ -239,6 +248,89 @@ class ConversationMembership(models.Model):
             models.UniqueConstraint(
                 fields=["conversation", "participant"],
                 name="communication_unique_conversation_member",
+            ),
+        ]
+
+
+class VoiceCall(models.Model):
+    conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE,
+        related_name="voice_calls",
+    )
+    started_by = models.ForeignKey(
+        CommunicationParticipant,
+        on_delete=models.CASCADE,
+        related_name="started_voice_calls",
+    )
+    started_at = models.DateTimeField(default=timezone.now)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["conversation"],
+                condition=Q(ended_at__isnull=True),
+                name="communication_one_active_voice_call",
+            ),
+        ]
+
+
+class VoiceCallParticipant(models.Model):
+    call = models.ForeignKey(
+        VoiceCall,
+        on_delete=models.CASCADE,
+        related_name="participants",
+    )
+    participant = models.ForeignKey(
+        CommunicationParticipant,
+        on_delete=models.CASCADE,
+        related_name="voice_call_memberships",
+    )
+    joined_at = models.DateTimeField(default=timezone.now)
+    last_seen_at = models.DateTimeField(default=timezone.now)
+    left_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["call", "participant"],
+                name="communication_unique_voice_call_member",
+            ),
+        ]
+
+
+class VoiceCallSignal(models.Model):
+    class SignalType(models.TextChoices):
+        OFFER = "offer", "Offer"
+        ANSWER = "answer", "Answer"
+        ICE = "ice", "ICE candidate"
+
+    call = models.ForeignKey(
+        VoiceCall,
+        on_delete=models.CASCADE,
+        related_name="signals",
+    )
+    sender = models.ForeignKey(
+        CommunicationParticipant,
+        on_delete=models.CASCADE,
+        related_name="sent_voice_call_signals",
+    )
+    recipient = models.ForeignKey(
+        CommunicationParticipant,
+        on_delete=models.CASCADE,
+        related_name="received_voice_call_signals",
+    )
+    signal_type = models.CharField(max_length=8, choices=SignalType.choices)
+    payload = models.JSONField()
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(sender=F("recipient")),
+                name="communication_voice_call_distinct_signal_users",
             ),
         ]
 

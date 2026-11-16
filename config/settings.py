@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import json
 import os
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -199,6 +200,26 @@ def _get_storages(environ):
     }
 
 
+def _get_communication_ice_servers(environ):
+    value = environ.get("CORIDE_COMMUNICATION_ICE_SERVERS", "").strip()
+    if not value:
+        return [{"urls": "stun:stun.l.google.com:19302"}]
+    try:
+        servers = json.loads(value)
+    except json.JSONDecodeError as error:
+        raise ImproperlyConfigured(
+            "CORIDE_COMMUNICATION_ICE_SERVERS must be a JSON list."
+        ) from error
+    if not isinstance(servers, list) or any(
+        not isinstance(server, dict) or not server.get("urls")
+        for server in servers
+    ):
+        raise ImproperlyConfigured(
+            "CORIDE_COMMUNICATION_ICE_SERVERS must be a JSON list of ICE servers."
+        )
+    return servers
+
+
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
@@ -245,6 +266,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 STORAGES = _get_storages(os.environ)
+COMMUNICATION_ICE_SERVERS = _get_communication_ice_servers(os.environ)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

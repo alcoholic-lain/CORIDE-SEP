@@ -1,7 +1,9 @@
 import csv
+import json
 from datetime import timedelta
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -37,11 +39,17 @@ from .models import (
     MessageRead,
     MessageReaction,
     Review,
+    VoiceCall,
+    VoiceCallParticipant,
+    VoiceCallSignal,
 )
 from .services import create_message, delete_message, edit_message
 
 
 MESSAGE_PAGE_SIZE = 10
+VOICE_CALL_PARTICIPANT_TIMEOUT = timedelta(seconds=45)
+VOICE_CALL_SIGNAL_LIMIT = 100
+VOICE_CALL_PAYLOAD_LIMIT = 16_384
 
 
 def _csv_cell(value):
@@ -351,24 +359,15 @@ def create_conversation(request):
     if response:
         return response
 
-    form = NewConversationForm(request.POST or None, participant=participant)
+    form = NewConversationForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        guests = list(form.cleaned_data["guests"])
         with transaction.atomic():
             conversation = Conversation.objects.create(
                 participant_one=participant,
-                participant_two=guests[0] if guests else None,
                 passenger=participant.user,
-                title=form.cleaned_data["title"],
+                chat_type=form.cleaned_data["chat_type"],
             )
-            conversation.participants.add(participant, *guests)
-            initial_message = form.cleaned_data["initial_message"]
-            if initial_message:
-                create_message(
-                    conversation=conversation,
-                    sender=participant,
-                    content=initial_message,
-                )
+            conversation.participants.add(participant)
         return redirect(
             "communication:conversation_detail",
             conversation_id=conversation.pk,
@@ -379,7 +378,6 @@ def create_conversation(request):
         "communication/new_conversation.html",
         {
             "form": form,
-            "guest_options": form.fields["guests"].queryset,
             "participant": participant,
         },
     )
@@ -411,6 +409,15 @@ def join_conversation(request, invite_code):
                         )
                     if not conversation.is_open:
                         join_error = "This conversation is closed."
+                    elif conversation.chat_type == Conversation.ChatType.GROUP:
+                        ConversationMembership.objects.get_or_create(
+                            conversation=conversation,
+                            participant=participant,
+                        )
+                        return redirect(
+                            "communication:conversation_detail",
+                            conversation_id=conversation.pk,
+                        )
                     else:
                         joined = Conversation.objects.filter(
                             pk=conversation.pk,
@@ -436,22 +443,32 @@ def join_conversation(request, invite_code):
                                 "communication:conversation_detail",
                                 conversation_id=conversation.pk,
                             )
-                        join_error = (
-                            "This private chat already has two participants."
-                        )
+                        join_error = "This private chat already has two participants."
             except IntegrityError:
-                join_error = "This private chat already has two participants."
+                conversation.refresh_from_db()
+                if conversation.includes(participant):
+                    return redirect(
+                        "communication:conversation_detail",
+                        conversation_id=conversation.pk,
+                    )
+                if conversation.chat_type == Conversation.ChatType.GROUP:
+                    join_error = "Could not join this group. Please try again."
+                else:
+                    join_error = "This private chat already has two participants."
 
-    elif participant is not None:
-        if conversation.includes(participant):
+    else:
+        if participant is not None and conversation.includes(participant):
             return redirect(
                 "communication:conversation_detail",
                 conversation_id=conversation.pk,
             )
-        if conversation.participant_two_id is not None:
-            join_error = "This private chat already has two participants."
-        elif not conversation.is_open:
+        if not conversation.is_open:
             join_error = "This conversation is closed."
+        elif (
+            conversation.chat_type == Conversation.ChatType.PRIVATE
+            and conversation.participant_two_id is not None
+        ):
+            join_error = "This private chat already has two participants."
 
     return render(
         request,
@@ -463,6 +480,10 @@ def join_conversation(request, invite_code):
             "name_form": name_form,
             "already_participant": (
                 conversation.includes(participant) if participant is not None else False
+            ),
+            "can_join": conversation.is_open and (
+                conversation.chat_type == Conversation.ChatType.GROUP
+                or conversation.participant_two_id is None
             ),
             "participant": participant,
         },
@@ -512,6 +533,13 @@ def _other_participants(conversation, participant):
     return other_participants
 
 
+def _voice_calls_supported(conversation, participant):
+    return (
+        conversation.chat_type == Conversation.ChatType.PRIVATE
+        and len(_other_participants(conversation, participant)) <= 1
+    )
+
+
 def conversation_detail(request, conversation_id):
     conversation, participant, response = _conversation_for_participant(
         request,
@@ -540,15 +568,21 @@ def conversation_detail(request, conversation_id):
         message_form.fields["content"].disabled = True
 
     invite_url = ""
-    if conversation.participant_two_id is None:
+    if (
+        conversation.chat_type == Conversation.ChatType.GROUP
+        or conversation.participant_two_id is None
+    ):
         invite_url = request.build_absolute_uri(
             reverse(
                 "communication:join_conversation",
                 args=[conversation.invite_code],
             )
         )
-
     other_participants = _other_participants(conversation, participant)
+    is_group_chat = (
+        conversation.chat_type == Conversation.ChatType.GROUP
+        or len(other_participants) > 1
+    )
     other_participant = next(iter(other_participants), None)
     pinned_messages = list(
         conversation.messages.filter(pinned_at__isnull=False)
@@ -574,9 +608,18 @@ def conversation_detail(request, conversation_id):
             "other_online_count": sum(
                 _is_online(member) for member in other_participants
             ),
-            "is_group_chat": len(other_participants) > 1,
+            "is_group_chat": is_group_chat,
             "participant_count": len(other_participants) + 1,
+            "voice_call_enabled": (
+                conversation.is_open
+                and not is_group_chat
+            ),
             "invite_url": invite_url,
+            "voice_call_ice_servers": getattr(
+                settings,
+                "COMMUNICATION_ICE_SERVERS",
+                [{"urls": "stun:stun.l.google.com:19302"}],
+            ),
             "latest_message_id": messages[-1].pk if messages else 0,
             "oldest_message_id": messages[0].pk if messages else 0,
             "has_older_messages": has_older_messages,
@@ -588,6 +631,239 @@ def conversation_detail(request, conversation_id):
             "pinned_messages": pinned_messages,
         },
     )
+
+
+def _active_voice_call(conversation, now=None):
+    now = now or timezone.now()
+    call = VoiceCall.objects.filter(
+        conversation=conversation,
+        ended_at__isnull=True,
+    ).first()
+    if call is None:
+        return None
+    if not conversation.is_open:
+        call.ended_at = now
+        call.save(update_fields=["ended_at"])
+        return None
+    active_since = now - VOICE_CALL_PARTICIPANT_TIMEOUT
+    if not call.participants.filter(
+        left_at__isnull=True,
+        last_seen_at__gte=active_since,
+    ).exists():
+        call.ended_at = now
+        call.save(update_fields=["ended_at"])
+        return None
+    return call
+
+
+def _voice_call_state(call, participant, now=None):
+    now = now or timezone.now()
+    active_since = now - VOICE_CALL_PARTICIPANT_TIMEOUT
+    active_participants = list(
+        call.participants.filter(
+            left_at__isnull=True,
+            last_seen_at__gte=active_since,
+        ).select_related("participant", "participant__user")
+    )
+    return {
+        "id": call.pk,
+        "participants": [
+            {
+                "id": member.participant_id,
+                "name": member.participant.display_label,
+            }
+            for member in active_participants
+        ],
+        "joined": any(
+            member.participant_id == participant.pk
+            for member in active_participants
+        ),
+    }
+
+
+@require_GET
+def voice_call_state(request, conversation_id):
+    conversation, participant, response = _conversation_for_participant(
+        request,
+        conversation_id,
+    )
+    if response:
+        return response
+    if not _voice_calls_supported(conversation, participant):
+        return JsonResponse({"call": None, "supported": False})
+    call = _active_voice_call(conversation)
+    return JsonResponse(
+        {
+            "call": (
+                _voice_call_state(call, participant) if call is not None else None
+            ),
+            "supported": True,
+        }
+    )
+
+
+@require_POST
+def voice_call_action(request, conversation_id):
+    conversation, participant, response = _conversation_for_participant(
+        request,
+        conversation_id,
+    )
+    if response:
+        return response
+    if not conversation.is_open:
+        return JsonResponse({"error": "This conversation is closed."}, status=409)
+    if not _voice_calls_supported(conversation, participant):
+        return JsonResponse(
+            {"error": "Voice calls are available in private two-person chats."},
+            status=409,
+        )
+    if len(request.body) > 32_768:
+        return JsonResponse({"error": "Call request is too large."}, status=413)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "Invalid call request."}, status=400)
+    if not isinstance(data, dict):
+        return JsonResponse({"error": "Invalid call request."}, status=400)
+
+    action = data.get("action")
+    if action == "start":
+        try:
+            with transaction.atomic():
+                locked_conversation = Conversation.objects.select_for_update().get(
+                    pk=conversation.pk
+                )
+                active_call = _active_voice_call(locked_conversation)
+                if active_call is not None:
+                    return JsonResponse(
+                        {"error": "A voice call is already active. Join it instead."},
+                        status=409,
+                    )
+                call = VoiceCall.objects.create(
+                    conversation=locked_conversation,
+                    started_by=participant,
+                )
+                VoiceCallParticipant.objects.create(
+                    call=call,
+                    participant=participant,
+                )
+        except IntegrityError:
+            return JsonResponse(
+                {"error": "A voice call is already active. Join it instead."},
+                status=409,
+            )
+        return JsonResponse(
+            {"call": _voice_call_state(call, participant)},
+            status=201,
+        )
+
+    call = _active_voice_call(conversation)
+    if call is None:
+        return JsonResponse({"error": "There is no active voice call."}, status=409)
+
+    if action == "join":
+        VoiceCallParticipant.objects.update_or_create(
+            call=call,
+            participant=participant,
+            defaults={
+                "joined_at": timezone.now(),
+                "last_seen_at": timezone.now(),
+                "left_at": None,
+            },
+        )
+        return JsonResponse({"call": _voice_call_state(call, participant)})
+
+    if action == "leave":
+        now = timezone.now()
+        VoiceCallParticipant.objects.filter(
+            call=call,
+            participant=participant,
+            left_at__isnull=True,
+        ).update(left_at=now, last_seen_at=now)
+        active_since = now - VOICE_CALL_PARTICIPANT_TIMEOUT
+        if not call.participants.filter(
+            left_at__isnull=True,
+            last_seen_at__gte=active_since,
+        ).exists():
+            call.ended_at = now
+            call.save(update_fields=["ended_at"])
+        return JsonResponse({"left": True})
+
+    if action == "sync":
+        try:
+            after = int(data.get("after", 0))
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "Invalid signal cursor."}, status=400)
+        if after < 0:
+            return JsonResponse({"error": "Invalid signal cursor."}, status=400)
+        membership = VoiceCallParticipant.objects.filter(
+            call=call,
+            participant=participant,
+            left_at__isnull=True,
+        )
+        if not membership.exists():
+            return JsonResponse(
+                {"error": "Join the call before syncing it."},
+                status=403,
+            )
+        membership.update(last_seen_at=timezone.now())
+        signals = list(
+            call.signals.filter(
+                recipient=participant,
+                pk__gt=after,
+            )
+            .select_related("sender")
+            .order_by("pk")[:VOICE_CALL_SIGNAL_LIMIT]
+        )
+        return JsonResponse(
+            {
+                "call": _voice_call_state(call, participant),
+                "signals": [
+                    {
+                        "id": signal.pk,
+                        "sender": signal.sender_id,
+                        "type": signal.signal_type,
+                        "payload": signal.payload,
+                    }
+                    for signal in signals
+                ],
+                "next_signal_id": signals[-1].pk if signals else after,
+            }
+        )
+
+    if action == "signal":
+        try:
+            recipient_id = int(data.get("recipient"))
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "Invalid call recipient."}, status=400)
+        signal_type = data.get("type")
+        payload = data.get("payload")
+        if (
+            recipient_id <= 0
+            or signal_type not in VoiceCallSignal.SignalType.values
+            or not isinstance(payload, dict)
+            or len(json.dumps(payload).encode("utf-8")) > VOICE_CALL_PAYLOAD_LIMIT
+        ):
+            return JsonResponse({"error": "Invalid call signal."}, status=400)
+        if not call.participants.filter(
+            participant_id=recipient_id,
+            left_at__isnull=True,
+            last_seen_at__gte=timezone.now() - VOICE_CALL_PARTICIPANT_TIMEOUT,
+        ).exists():
+            return JsonResponse(
+                {"error": "That participant is not in the active call."},
+                status=409,
+            )
+        VoiceCallSignal.objects.create(
+            call=call,
+            sender=participant,
+            recipient_id=recipient_id,
+            signal_type=signal_type,
+            payload=payload,
+        )
+        return JsonResponse({"sent": True}, status=201)
+
+    return JsonResponse({"error": "Unknown call action."}, status=400)
 
 
 def poll_messages(request, conversation_id):

@@ -3,6 +3,7 @@
 
 {% block title %}{{ conversation.title|default:"Chat" }}{% endblock %}
 {% block page_class %} page-chat{% endblock %}
+{% block body_class %}chat-theme{% endblock %}
 
 {% block content %}
 <section class="chat-shell">
@@ -41,6 +42,9 @@
             </div>
         </div>
         <div class="chat-header-actions">
+            <button id="voice-call-toggle" class="icon-button call-button" type="button" aria-label="Open voice call" title="{% if is_group_chat %}Voice calls are available in private two-person chats{% else %}Voice call{% endif %}"{% if not conversation.is_open %} disabled{% endif %}>
+                <span aria-hidden="true">☎</span> <span>Call</span>
+            </button>
             <button id="message-search-toggle" class="icon-button" type="button" aria-label="Search messages" title="Search messages">Search</button>
             <button id="pinned-toggle" class="icon-button" type="button" aria-label="Show pinned messages" title="Pinned messages">
                 Pins <span id="pinned-count">{{ pinned_messages|length }}</span>
@@ -50,6 +54,31 @@
             </span>
         </div>
     </header>
+
+    <aside
+        id="voice-call-panel"
+        class="voice-call-panel"
+        data-call-url="{% url 'communication:voice_call_action' conversation.id %}"
+        data-state-url="{% url 'communication:voice_call_state' conversation.id %}"
+        data-participant-id="{{ participant.id }}"
+        data-call-enabled="{{ voice_call_enabled|yesno:'true,false' }}"
+        data-group-chat="{{ is_group_chat|yesno:'true,false' }}"
+        hidden
+    >
+        <div class="voice-call-copy">
+            <strong>Voice call</strong>
+            <p id="voice-call-status" role="status" aria-live="polite">Checking for an active call…</p>
+        </div>
+        <p id="voice-call-participants" class="voice-call-participants"></p>
+        <div class="voice-call-actions">
+            <button id="voice-call-action" class="button" type="button">Start call</button>
+            <button id="voice-call-mute" class="button button-secondary" type="button" hidden>Mute</button>
+            <button id="voice-call-leave" class="button button-secondary" type="button" hidden>Leave call</button>
+        </div>
+        <div id="voice-call-audio" class="voice-call-audio" aria-hidden="true"></div>
+        <p id="voice-call-error" class="form-error" role="alert"></p>
+    </aside>
+    {{ voice_call_ice_servers|json_script:"voice-call-ice-servers" }}
 
     <form id="message-search" class="message-search" role="search" hidden>
         <input id="message-search-input" type="search" placeholder="Search loaded messages" aria-label="Search loaded messages">
@@ -79,12 +108,17 @@
     {% if invite_url %}
         <aside class="invite-panel" id="invite-panel">
             <div>
-                <strong>Invite someone to this chat</strong>
-                <p>Only one person can join. Anyone with this private link can read and send messages.</p>
+                <strong>Bring someone into the chat</strong>
+                <p>
+                    {% if is_group_chat %}
+                        Share the link and they can join this group.
+                    {% else %}
+                        Share the link to invite one person into this private chat.
+                    {% endif %}
+                </p>
             </div>
             <div class="invite-copy">
-                <input id="invite-link" type="text" value="{{ invite_url }}" readonly aria-label="Private invite link">
-                <button class="button button-secondary" id="copy-invite" type="button">Copy link</button>
+                <button class="button button-secondary" id="copy-invite" type="button" data-invite-url="{{ invite_url }}">Copy invite link</button>
             </div>
             <p class="copy-status" id="copy-status" aria-live="polite"></p>
         </aside>
@@ -284,4 +318,5 @@
 </template>
 
 <script src="{% static 'communication/conversation_detail.js' %}" defer></script>
+<script src="{% static 'communication/voice_call.js' %}" defer></script>
 {% endblock %}

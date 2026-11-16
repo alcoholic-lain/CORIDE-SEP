@@ -949,14 +949,17 @@
     const inviteButton = document.getElementById("copy-invite");
     if (inviteButton) {
         inviteButton.addEventListener("click", async () => {
-            const invite = document.getElementById("invite-link");
             try {
-                await navigator.clipboard.writeText(invite.value);
+                await navigator.clipboard.writeText(inviteButton.dataset.inviteUrl);
                 document.getElementById("copy-status").textContent = "Invite link copied.";
             } catch {
-                invite.select();
-                document.execCommand("copy");
-                document.getElementById("copy-status").textContent = "Select and copy the invite link.";
+                const copied = window.prompt(
+                    "Copy this invite link",
+                    inviteButton.dataset.inviteUrl
+                ) !== null;
+                document.getElementById("copy-status").textContent = copied
+                    ? "Copy the link from the dialog."
+                    : "The invite link was not copied.";
             }
         });
     }

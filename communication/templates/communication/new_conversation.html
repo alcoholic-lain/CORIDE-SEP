@@ -1,75 +1,32 @@
 {% extends "communication/base.html" %}
 
-{% block title %}New chat{% endblock %}
+{% block title %}Create an invite{% endblock %}
+{% block body_class %}chat-theme{% endblock %}
 
 {% block content %}
-<section class="form-card">
+<section class="form-card new-chat-card">
     <a class="back-link" href="{% url 'communication:conversation_list' %}">← Back to chats</a>
     <p class="eyebrow">START A CONVERSATION</p>
-    <h1>Who do you want to message?</h1>
-    <p class="muted">Only people from your existing chats appear here. Start a private chat with one person, or choose at least two contacts for a group chat. To invite someone new, create a private chat without choosing a contact and share its link.</p>
-    <form method="post">
+    <h1>Create an invite</h1>
+    <p class="muted">Choose who can join. Your invite link will be ready right away.</p>
+    {% if form.errors %}<p class="form-error" role="alert">Choose a valid invite type.</p>{% endif %}
+    <form method="post" class="invite-options">
         {% csrf_token %}
-        {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
-        <fieldset class="chat-type-field">
-            <legend>{{ form.chat_type.label }}</legend>
-            {{ form.chat_type }}
-            {{ form.chat_type.errors }}
-        </fieldset>
-        {% if guest_options %}
-            <div class="guest-picker">
-                <label for="guest-picker-search">Choose chat contacts</label>
-                <input id="guest-picker-search" type="search" placeholder="Search contact names" autocomplete="off">
-                <p class="muted">Selected contacts can see the full conversation, including its first message.</p>
-                {{ form.guests }}
-                <p id="guest-picker-empty" class="muted" hidden>No contacts match your search.</p>
-                <p id="guest-picker-count" class="muted" aria-live="polite">No contacts selected.</p>
-            </div>
-        {% else %}
-            <p class="muted">No contacts from your existing chats are available. You can start a private chat and share its invite link.</p>
-        {% endif %}
-        {{ form.guests.errors }}
-        <label for="{{ form.title.id_for_label }}">Chat name</label>
-        {{ form.title }}
-        {{ form.title.errors }}
-        <label for="{{ form.initial_message.id_for_label }}">First message <span class="optional">(optional)</span></label>
-        {{ form.initial_message }}
-        {{ form.initial_message.errors }}
-        <button class="button" type="submit">Create chat</button>
+        {% for value, label in form.fields.chat_type.choices %}
+            <button class="invite-option" type="submit" name="chat_type" value="{{ value }}">
+                <span class="invite-option-copy">
+                    <strong>{{ label }}</strong>
+                    <span>
+                        {% if value == "GROUP" %}
+                            Anyone with the link can join the group.
+                        {% else %}
+                            Invite one person to a private chat.
+                        {% endif %}
+                    </span>
+                </span>
+                <span class="invite-option-arrow" aria-hidden="true">→</span>
+            </button>
+        {% endfor %}
     </form>
 </section>
-{% if guest_options %}
-<script>
-    (() => {
-        const search = document.getElementById("guest-picker-search");
-        const list = document.querySelector(".guest-choice-list");
-        const empty = document.getElementById("guest-picker-empty");
-        const count = document.getElementById("guest-picker-count");
-        if (!search || !list || !empty || !count) return;
-
-        const options = Array.from(list.querySelectorAll("li"));
-        const updateSearch = () => {
-            const query = search.value.trim().toLocaleLowerCase();
-            let visible = 0;
-            options.forEach((option) => {
-                const matches = option.textContent.toLocaleLowerCase().includes(query);
-                option.hidden = !matches;
-                if (matches) visible += 1;
-            });
-            empty.hidden = visible > 0;
-        };
-        const updateCount = () => {
-            const selected = list.querySelectorAll("input[type=checkbox]:checked").length;
-            count.textContent = selected
-                ? `${selected} contact${selected === 1 ? "" : "s"} selected.`
-                : "No contacts selected.";
-        };
-
-        search.addEventListener("input", updateSearch);
-        list.addEventListener("change", updateCount);
-        updateSearch();
-        updateCount();
-    })();
-</script>
-{% endif %}
 {% endblock %}

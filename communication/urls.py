@@ -34,6 +34,16 @@ urlpatterns = [
         name="typing_status",
     ),
     path(
+        "chat/<int:conversation_id>/voice-call/",
+        views.voice_call_action,
+        name="voice_call_action",
+    ),
+    path(
+        "chat/<int:conversation_id>/voice-call/state/",
+        views.voice_call_state,
+        name="voice_call_state",
+    ),
+    path(
         "chat/<int:conversation_id>/send/",
         views.send_message,
         name="send_message",

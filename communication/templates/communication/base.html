@@ -26,6 +26,16 @@
                 <span class="identity-pill">
                     {{ participant.display_label }}{% if participant.is_guest %} · guest{% endif %}
                 </span>
+                {% if participant.is_guest %}
+                    <form
+                        class="guest-change-form"
+                        action="{% url 'communication:change_guest' %}"
+                        method="post"
+                    >
+                        {% csrf_token %}
+                        <button class="guest-change-button" type="submit">Change guest</button>
+                    </form>
+                {% endif %}
             {% elif user.is_authenticated %}
                 <span class="identity-pill">{{ user.get_username }}</span>
             {% endif %}

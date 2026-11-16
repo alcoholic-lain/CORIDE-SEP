@@ -275,6 +275,14 @@ def index(request):
     )
 
 
+@require_POST
+def change_guest(request):
+    participant = get_request_participant(request)
+    if participant is not None and participant.is_guest:
+        request.session.flush()
+    return redirect("communication:index")
+
+
 def conversation_list(request):
     participant, response = _participant_or_redirect(request)
     if response:

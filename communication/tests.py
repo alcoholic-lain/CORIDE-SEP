@@ -1077,6 +1077,36 @@ class GuestConversationTests(TestCase):
         self.assertEqual(response.json()["messages"][0]["content"], "On my way")
         self.assertFalse(response.json()["messages"][0]["is_mine"])
 
+    def test_guest_can_return_to_name_entry_without_deleting_guest_data(self):
+        self.start_guest(self.owner, "Alex")
+        participant = CommunicationParticipant.objects.get(
+            session_key=self.owner.session.session_key
+        )
+        self.owner.post(
+            reverse("communication:create_conversation"),
+            {"chat_type": "PRIVATE"},
+        )
+        conversation = Conversation.objects.get(participant_one=participant)
+
+        chat_list = self.owner.get(reverse("communication:conversation_list"))
+        self.assertContains(chat_list, "Change guest")
+
+        response = self.owner.post(reverse("communication:change_guest"))
+        self.assertRedirects(
+            response,
+            reverse("communication:index"),
+            fetch_redirect_response=False,
+        )
+        response = self.owner.get(reverse("communication:index"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context["participant"])
+        self.assertIsNone(response.context["name_form"]["display_name"].value())
+        self.assertTrue(
+            CommunicationParticipant.objects.filter(pk=participant.pk).exists()
+        )
+        self.assertTrue(Conversation.objects.filter(pk=conversation.pk).exists())
+
     def test_guest_sessions_are_isolated_and_invite_accepts_only_one_person(self):
         self.start_guest(self.owner, "Owner")
         self.owner.post(

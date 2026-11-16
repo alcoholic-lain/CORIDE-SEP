@@ -31,6 +31,23 @@
             {% endif %}
         </nav>
     </header>
+    {% if participant %}
+        <aside
+            id="incoming-call-notifications"
+            class="incoming-call-notifications"
+            data-state-url="{% url 'communication:incoming_voice_calls_state' %}"
+            hidden
+            aria-label="Incoming calls"
+        >
+            <div
+                id="incoming-call-list"
+                class="incoming-call-list"
+                aria-live="assertive"
+                aria-relevant="additions text"
+            ></div>
+            <p id="incoming-call-error" class="incoming-call-error" role="alert" hidden></p>
+        </aside>
+    {% endif %}
     <main class="page{% block page_class %}{% endblock %}">
         {% if messages %}
             {% for message in messages %}
@@ -39,5 +56,8 @@
         {% endif %}
         {% block content %}{% endblock %}
     </main>
+    {% if participant %}
+        <script src="{% static 'communication/incoming_calls.js' %}" defer></script>
+    {% endif %}
 </body>
 </html>

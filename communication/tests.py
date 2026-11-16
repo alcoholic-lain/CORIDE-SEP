@@ -71,6 +71,8 @@ class ConversationTests(CommunicationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Your chats")
         self.assertContains(response, "driver")
+        self.assertContains(response, 'id="incoming-call-notifications"')
+        self.assertContains(response, "incoming_calls.js")
 
     def test_room_search_matches_titles_and_participants_without_leaking_rooms(self):
         outsider_participant, _ = CommunicationParticipant.objects.get_or_create(
@@ -725,6 +727,7 @@ class VoiceCallTests(CommunicationTestCase):
             "communication:voice_call_state",
             args=[self.conversation.pk],
         )
+        self.incoming_url = reverse("communication:incoming_voice_calls_state")
 
     def post_action(self, client, action, **data):
         return client.post(
@@ -787,6 +790,37 @@ class VoiceCallTests(CommunicationTestCase):
         self.assertEqual(self.post_action(self.guest, "leave").status_code, 200)
         call.refresh_from_db()
         self.assertIsNotNone(call.ended_at)
+
+    def test_incoming_call_notifications_follow_the_recipient_across_chats(self):
+        started = self.post_action(self.owner, "start")
+        self.assertEqual(started.status_code, 201)
+        call_id = started.json()["call"]["id"]
+
+        caller_calls = self.owner.get(self.incoming_url).json()["calls"]
+        recipient_calls = self.guest.get(self.incoming_url).json()["calls"]
+        outsider = Client()
+        outsider.force_login(self.outsider)
+        outsider_calls = outsider.get(self.incoming_url).json()["calls"]
+
+        self.assertEqual(caller_calls, [])
+        self.assertEqual(outsider_calls, [])
+        self.assertEqual(
+            recipient_calls,
+            [
+                {
+                    "id": call_id,
+                    "conversation_id": self.conversation.pk,
+                    "caller": self.passenger_participant.display_label,
+                    "conversation_url": reverse(
+                        "communication:conversation_detail",
+                        args=[self.conversation.pk],
+                    ),
+                }
+            ],
+        )
+
+        self.assertEqual(self.post_action(self.guest, "join").status_code, 200)
+        self.assertEqual(self.guest.get(self.incoming_url).json()["calls"], [])
 
     def test_call_actions_require_a_member_and_validate_signals(self):
         outsider = Client()

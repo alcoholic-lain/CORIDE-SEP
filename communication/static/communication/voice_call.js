@@ -15,6 +15,10 @@
     const participantId = Number(panel.dataset.participantId);
     const callEnabled = panel.dataset.callEnabled === "true";
     const groupChat = panel.dataset.groupChat === "true";
+    const answerCallId = Number(
+        new URLSearchParams(window.location.search).get("answer_call")
+    );
+    let autoAnswerPending = Number.isSafeInteger(answerCallId) && answerCallId > 0;
     const csrfToken = document.querySelector(
         "#send-form input[name=csrfmiddlewaretoken]"
     )?.value;
@@ -29,12 +33,7 @@
     let signalCursor = 0;
     let busy = false;
     let syncing = false;
-    let ringtoneContext = null;
-    let ringtoneTimer = null;
-    let ringtoneShouldPlay = false;
-    let ringtoneResumePending = false;
-    let ringtoneNeedsGesture = false;
-    const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+    if (autoAnswerPending) panel.hidden = false;
 
     async function request(url, method = "GET", data = null, keepalive = false) {
         const headers = {};
@@ -54,95 +53,6 @@
 
     function showError(message = "") {
         errorBox.textContent = message;
-    }
-
-    function ringBurst() {
-        if (!ringtoneShouldPlay || !ringtoneContext
-            || ringtoneContext.state !== "running") return;
-        const startAt = ringtoneContext.currentTime;
-        [0, 0.8].forEach((offset) => {
-            const gain = ringtoneContext.createGain();
-            const toneStart = startAt + offset;
-            gain.gain.setValueAtTime(0.0001, toneStart);
-            gain.gain.exponentialRampToValueAtTime(0.045, toneStart + 0.05);
-            gain.gain.setValueAtTime(0.045, toneStart + 0.55);
-            gain.gain.exponentialRampToValueAtTime(0.0001, toneStart + 0.65);
-            gain.connect(ringtoneContext.destination);
-            [440, 480].forEach((frequency) => {
-                const oscillator = ringtoneContext.createOscillator();
-                oscillator.frequency.value = frequency;
-                oscillator.connect(gain);
-                oscillator.start(toneStart);
-                oscillator.stop(toneStart + 0.66);
-            });
-        });
-    }
-
-    function beginRingtone() {
-        if (!ringtoneShouldPlay || ringtoneTimer) return;
-        ringtoneNeedsGesture = false;
-        ringBurst();
-        ringtoneTimer = window.setInterval(ringBurst, 4000);
-    }
-
-    function startRingtone() {
-        ringtoneShouldPlay = true;
-        if (!AudioContextConstructor) {
-            ringtoneNeedsGesture = true;
-            updateInterface();
-            return;
-        }
-        if (!ringtoneContext) ringtoneContext = new AudioContextConstructor();
-        if (ringtoneContext.state === "running") {
-            beginRingtone();
-            return;
-        }
-        ringtoneNeedsGesture = true;
-        if (ringtoneResumePending) return;
-        ringtoneResumePending = true;
-        ringtoneContext.resume().then(() => {
-            ringtoneResumePending = false;
-            if (ringtoneShouldPlay) beginRingtone();
-            updateInterface();
-        }).catch(() => {
-            ringtoneResumePending = false;
-            updateInterface();
-        });
-    }
-
-    function stopRingtone() {
-        ringtoneShouldPlay = false;
-        ringtoneNeedsGesture = false;
-        if (ringtoneTimer) window.clearInterval(ringtoneTimer);
-        ringtoneTimer = null;
-    }
-
-    function unlockRingtone() {
-        if (!AudioContextConstructor) return;
-        if (!ringtoneContext) ringtoneContext = new AudioContextConstructor();
-        if (ringtoneContext.state === "running" || ringtoneResumePending) return;
-        ringtoneResumePending = true;
-        ringtoneContext.resume().then(() => {
-            ringtoneResumePending = false;
-            ringtoneNeedsGesture = false;
-            if (ringtoneShouldPlay) beginRingtone();
-            updateInterface();
-        }).catch(() => {
-            ringtoneResumePending = false;
-            updateInterface();
-        });
-    }
-
-    function updateRingtone() {
-        const incoming = Boolean(
-            call
-            && !joined
-            && !call.joined
-            && !call.previously_joined
-            && call.started_by !== participantId
-        );
-        if (incoming) startRingtone();
-        else stopRingtone();
     }
 
     function updateInterface() {
@@ -186,9 +96,6 @@
             status.textContent = "Connected to the voice call.";
         } else if (incoming) {
             status.textContent = `Incoming call${caller ? ` from ${caller.name}` : ""}.`;
-            if (ringtoneNeedsGesture) {
-                status.textContent += " Tap anywhere to enable the ringtone.";
-            }
         } else if (callActive && call.joined) {
             status.textContent = "This account is already in the call in another tab.";
         } else if (callActive && call.previously_joined) {
@@ -322,7 +229,6 @@
             });
             if (!joined) return;
             call = result.call;
-            updateRingtone();
             await updatePeers(call.participants);
             for (const signal of result.signals) {
                 signalCursor = signal.id;
@@ -339,8 +245,21 @@
         try {
             const result = await request(stateUrl);
             call = result.call;
-            updateRingtone();
             updateInterface();
+            if (autoAnswerPending) {
+                const shouldAnswer = Boolean(
+                    call
+                    && call.id === answerCallId
+                    && !call.joined
+                    && !call.previously_joined
+                    && call.started_by !== participantId
+                );
+                autoAnswerPending = false;
+                const cleanUrl = new URL(window.location.href);
+                cleanUrl.searchParams.delete("answer_call");
+                window.history.replaceState(null, "", cleanUrl);
+                if (shouldAnswer) await joinOrStartCall();
+            }
         } catch (error) {
             showError(error.message);
         }
@@ -367,7 +286,6 @@
             );
             call = result.call;
             joined = true;
-            updateRingtone();
             signalCursor = 0;
             updateInterface();
             await syncCall();
@@ -392,7 +310,6 @@
             localStream = null;
         }
         joined = false;
-        updateRingtone();
         muteButton.textContent = "Mute";
         updateInterface();
     }
@@ -426,8 +343,6 @@
         muteButton.textContent = shouldMute ? "Unmute" : "Mute";
     });
     leaveButton.addEventListener("click", leaveCall);
-    document.addEventListener("pointerdown", unlockRingtone);
-    document.addEventListener("keydown", unlockRingtone);
 
     window.setInterval(() => {
         if (!joined || busy) return;
@@ -438,8 +353,6 @@
     }, 1000);
     window.setInterval(refreshCallState, 3000);
     window.addEventListener("pagehide", () => {
-        stopRingtone();
-        if (ringtoneContext) ringtoneContext.close();
         if (!joined) return;
         fetch(callUrl, {
             method: "POST",

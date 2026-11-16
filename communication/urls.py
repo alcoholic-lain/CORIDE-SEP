@@ -44,6 +44,11 @@ urlpatterns = [
         name="voice_call_state",
     ),
     path(
+        "chat/voice-calls/incoming/",
+        views.incoming_voice_calls_state,
+        name="incoming_voice_calls_state",
+    ),
+    path(
         "chat/<int:conversation_id>/send/",
         views.send_message,
         name="send_message",

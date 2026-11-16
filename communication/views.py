@@ -706,6 +706,89 @@ def voice_call_state(request, conversation_id):
     )
 
 
+@require_GET
+def incoming_voice_calls_state(request):
+    participant = get_request_participant(request)
+    if participant is None:
+        return JsonResponse({"calls": []})
+
+    now = timezone.now()
+    if participant.is_guest:
+        conversation_identity = (
+            Q(
+                conversation__participant_one__user__isnull=True,
+                conversation__participant_one__display_name__iexact=(
+                    participant.display_name
+                ),
+            )
+            | Q(
+                conversation__participant_two__user__isnull=True,
+                conversation__participant_two__display_name__iexact=(
+                    participant.display_name
+                ),
+            )
+            | Q(
+                conversation__memberships__participant__user__isnull=True,
+                conversation__memberships__participant__display_name__iexact=(
+                    participant.display_name
+                ),
+            )
+        )
+    else:
+        conversation_identity = (
+            Q(conversation__participant_one_id=participant.pk)
+            | Q(conversation__participant_two_id=participant.pk)
+            | Q(conversation__memberships__participant_id=participant.pk)
+        )
+
+    calls = (
+        VoiceCall.objects.filter(
+            ended_at__isnull=True,
+            conversation__chat_type=Conversation.ChatType.PRIVATE,
+            conversation__closed_at__isnull=True,
+            participants__left_at__isnull=True,
+            participants__last_seen_at__gte=now - VOICE_CALL_PARTICIPANT_TIMEOUT,
+        )
+        .filter(conversation_identity)
+        .filter(
+            Q(conversation__departure_at__isnull=True)
+            | Q(conversation__departure_at__gt=now - timedelta(hours=24))
+        )
+        .select_related("conversation", "started_by", "started_by__user")
+        .prefetch_related(
+            "participants__participant",
+            "participants__participant__user",
+        )
+        .distinct()
+        .order_by("-started_at")[:20]
+    )
+
+    incoming = []
+    for call in calls:
+        memberships = list(call.participants.all())
+        if (
+            call.started_by.matches_identity(participant)
+            or any(
+                member.participant.matches_identity(participant)
+                for member in memberships
+            )
+        ):
+            continue
+        incoming.append(
+            {
+                "id": call.pk,
+                "conversation_id": call.conversation_id,
+                "caller": call.started_by.display_label,
+                "conversation_url": reverse(
+                    "communication:conversation_detail",
+                    args=[call.conversation_id],
+                ),
+            }
+        )
+
+    return JsonResponse({"calls": incoming})
+
+
 @require_POST
 def voice_call_action(request, conversation_id):
     conversation, participant, response = _conversation_for_participant(

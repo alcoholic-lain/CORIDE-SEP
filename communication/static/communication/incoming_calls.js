@@ -5,6 +5,9 @@
     if (!notifications || !list || !errorBox) return;
 
     const stateUrl = notifications.dataset.stateUrl;
+    const currentChat = document.querySelector(".chat-shell[data-conversation-id]");
+    const currentConversationId = currentChat?.dataset.conversationId;
+    const callPanel = document.getElementById("voice-call-panel");
     const cards = new Map();
     const dismissedCallIds = new Set();
     const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
@@ -153,7 +156,13 @@
     }
 
     function updateCallNotifications(calls = []) {
-        const activeIds = new Set(calls.map((call) => String(call.id)));
+        const visibleCalls = calls.filter((call) => !(
+            currentConversationId
+            && String(call.conversation_id) === currentConversationId
+            && callPanel
+            && !callPanel.hidden
+        ));
+        const activeIds = new Set(visibleCalls.map((call) => String(call.id)));
         dismissedCallIds.forEach((id) => {
             if (!activeIds.has(id)) dismissedCallIds.delete(id);
         });
@@ -163,7 +172,7 @@
                 cards.delete(id);
             }
         });
-        calls.forEach((call) => {
+        visibleCalls.forEach((call) => {
             const id = String(call.id);
             if (dismissedCallIds.has(id) || cards.has(id)) return;
             const card = createCallCard(call);
@@ -175,6 +184,10 @@
         else stopRingtone();
         notifications.hidden = cards.size === 0 && errorBox.hidden;
     }
+
+    window.addEventListener("coride:call-panel-visibility-change", () => {
+        updateCallNotifications(currentCalls);
+    });
 
     async function pollIncomingCalls() {
         if (polling) return;

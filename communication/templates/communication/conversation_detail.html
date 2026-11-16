@@ -6,7 +6,7 @@
 {% block body_class %}chat-theme{% endblock %}
 
 {% block content %}
-<section class="chat-shell">
+<section class="chat-shell" data-conversation-id="{{ conversation.id }}">
     <header class="chat-heading">
         <div class="chat-title">
             <a class="back-link" href="{% url 'communication:conversation_list' %}">← All chats</a>
@@ -72,6 +72,7 @@
         <p id="voice-call-participants" class="voice-call-participants"></p>
         <div class="voice-call-actions">
             <button id="voice-call-action" class="button" type="button">Start call</button>
+            <button id="voice-call-enable-audio" class="button button-secondary" type="button" hidden>Enable audio</button>
             <button id="voice-call-mute" class="button button-secondary" type="button" hidden>Mute</button>
             <button id="voice-call-leave" class="button button-secondary" type="button" hidden>Leave call</button>
         </div>
@@ -259,7 +260,7 @@
             <button id="reply-composer-close" class="icon-button" type="button" aria-label="Cancel reply">×</button>
         </div>
         <div class="compose-box">
-            <label class="attachment-button" for="id_attachment" aria-label="Attach a file" title="Attach a file">+</label>
+            <button id="attachment-trigger" class="attachment-button" type="button" aria-label="Attach a file" title="Attach a file">+</button>
             {{ message_form.attachment }}
             {{ message_form.content }}
             <details class="emoji-picker">

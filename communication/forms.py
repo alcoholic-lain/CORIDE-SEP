@@ -66,7 +66,11 @@ class MessageForm(forms.Form):
     attachment = forms.FileField(
         required=False,
         widget=forms.FileInput(
-            attrs={"accept": "image/gif,image/jpeg,image/png,image/webp,application/pdf"}
+            attrs={
+                "accept": "image/gif,image/jpeg,image/png,image/webp,application/pdf",
+                "aria-hidden": "true",
+                "tabindex": "-1",
+            }
         ),
     )
     reply_to = forms.IntegerField(required=False, widget=forms.HiddenInput)

@@ -2,6 +2,7 @@
     const panel = document.getElementById("voice-call-panel");
     const toggle = document.getElementById("voice-call-toggle");
     const actionButton = document.getElementById("voice-call-action");
+    const enableAudioButton = document.getElementById("voice-call-enable-audio");
     const muteButton = document.getElementById("voice-call-mute");
     const leaveButton = document.getElementById("voice-call-leave");
     const status = document.getElementById("voice-call-status");
@@ -88,6 +89,7 @@
         muteButton.hidden = !isJoined;
         leaveButton.hidden = !isJoined;
         toggle.setAttribute("aria-expanded", String(!panel.hidden));
+        window.dispatchEvent(new Event("coride:call-panel-visibility-change"));
         if (!callEnabled && !isJoined) {
             status.textContent = groupChat
                 ? "Voice calls are available in private two-person chats."
@@ -152,7 +154,10 @@
             }
             audio.srcObject = event.streams[0];
             audio.play().catch(() => {
-                showError("Allow audio playback in your browser to hear the call.");
+                if (enableAudioButton) enableAudioButton.hidden = false;
+                showError(enableAudioButton
+                    ? "Audio playback is blocked. Tap Enable audio to hear the call."
+                    : "Allow audio playback in your browser to hear the call.");
             });
         };
         connection.onconnectionstatechange = () => {
@@ -295,7 +300,15 @@
                 localStream = null;
             }
             joined = false;
-            showError(error.message);
+            if (["NotAllowedError", "PermissionDeniedError", "SecurityError"].includes(error.name)) {
+                showError(
+                    "Microphone access is blocked. Allow microphone access for this site in your browser settings, then tap Answer again."
+                );
+            } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+                showError("No microphone was found. Connect or enable a microphone, then try again.");
+            } else {
+                showError(error.message);
+            }
             await refreshCallState();
         } finally {
             busy = false;
@@ -310,6 +323,7 @@
             localStream = null;
         }
         joined = false;
+        if (enableAudioButton) enableAudioButton.hidden = true;
         muteButton.textContent = "Mute";
         updateInterface();
     }
@@ -334,6 +348,19 @@
         if (!panel.hidden) await refreshCallState();
     });
     actionButton.addEventListener("click", joinOrStartCall);
+    if (enableAudioButton) {
+        enableAudioButton.addEventListener("click", async () => {
+            try {
+                await Promise.all(
+                    [...audioContainer.querySelectorAll("audio")].map((audio) => audio.play())
+                );
+                enableAudioButton.hidden = true;
+                showError();
+            } catch {
+                showError("Audio is still blocked. Check your browser's site permissions.");
+            }
+        });
+    }
     muteButton.addEventListener("click", () => {
         if (!localStream) return;
         const shouldMute = localStream.getAudioTracks().some((track) => track.enabled);

@@ -10,6 +10,7 @@
     const input = form.elements.content;
     const replyInput = form.elements.reply_to;
     const attachmentInput = form.elements.attachment;
+    let selectedAttachment = null;
     const replyComposer = document.getElementById("reply-composer");
     const attachmentPreview = document.getElementById("attachment-preview");
     const searchPanel = document.getElementById("message-search");
@@ -744,6 +745,10 @@
         stopTyping();
         errorBox.textContent = "";
         const body = new FormData(form);
+        body.delete(attachmentInput.name);
+        if (selectedAttachment) {
+            body.append(attachmentInput.name, selectedAttachment, selectedAttachment.name);
+        }
         try {
             const response = await fetch(form.dataset.sendUrl, {
                 method: "POST",
@@ -761,6 +766,7 @@
                 return;
             }
             form.reset();
+            selectedAttachment = null;
             resizeComposer();
             clearReply();
             attachmentPreview.hidden = true;
@@ -869,27 +875,61 @@
 
     document.getElementById("reply-composer-close").addEventListener("click", clearReply);
 
+    const attachmentName = document.getElementById("attachment-preview-name");
     const attachmentClear = document.getElementById("attachment-clear");
-    attachmentInput.addEventListener("change", () => {
-        const file = attachmentInput.files[0];
-        if (!file) {
-            attachmentPreview.hidden = true;
-            return;
-        }
+    function selectAttachment(file) {
         if (file.size > 8 * 1024 * 1024) {
+            selectedAttachment = null;
             attachmentInput.value = "";
             attachmentPreview.hidden = true;
+            attachmentName.textContent = "";
             errorBox.textContent = "Files must be 8 MB or smaller.";
+        } else {
+            selectedAttachment = file;
+            attachmentInput.value = "";
+            errorBox.textContent = "";
+            attachmentName.textContent = file.name;
+            attachmentPreview.hidden = false;
+        }
+    }
+    attachmentInput.addEventListener("change", () => {
+        const file = attachmentInput.files[0];
+        if (file) selectAttachment(file);
+    });
+    document.getElementById("attachment-trigger").addEventListener("click", () => {
+        attachmentInput.click();
+    });
+    input.addEventListener("paste", (event) => {
+        const clipboardItems = [...(event.clipboardData?.items || [])];
+        const imageItem = clipboardItems.find((item) => item.type.startsWith("image/"));
+        if (!imageItem) return;
+
+        const image = imageItem.getAsFile();
+        if (!image) return;
+        const extensions = {
+            "image/gif": "gif",
+            "image/jpeg": "jpg",
+            "image/png": "png",
+            "image/webp": "webp"
+        };
+        const extension = extensions[image.type];
+        if (!extension) {
+            event.preventDefault();
+            errorBox.textContent = "Paste a PNG, JPEG, GIF, or WebP image.";
             return;
         }
-        errorBox.textContent = "";
-        document.getElementById("attachment-preview-name").textContent = file.name;
-        attachmentPreview.hidden = false;
+        event.preventDefault();
+        selectAttachment(new File(
+            [image],
+            `pasted-image-${Date.now()}.${extension}`,
+            { type: image.type }
+        ));
     });
     attachmentClear.addEventListener("click", () => {
+        selectedAttachment = null;
         attachmentInput.value = "";
         attachmentPreview.hidden = true;
-        document.getElementById("attachment-preview-name").textContent = "";
+        attachmentName.textContent = "";
     });
 
     document.getElementById("message-search-toggle").addEventListener("click", () => {
@@ -929,7 +969,7 @@
             return;
         }
         event.preventDefault();
-        if (input.value.trim() || attachmentInput.files.length) {
+        if (input.value.trim() || selectedAttachment) {
             form.requestSubmit();
         }
     });

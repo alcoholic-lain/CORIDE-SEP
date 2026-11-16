@@ -1619,7 +1619,7 @@ p {
     position: relative;
     display: grid;
     flex: 1;
-    grid-template-columns: 34px minmax(0, 1fr) 44px;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
     grid-template-rows: auto auto;
     align-items: center;
     min-width: 0;
@@ -1633,22 +1633,31 @@ p {
     display: grid;
     grid-column: 1;
     grid-row: 1;
-    width: 30px;
-    height: 34px;
+    width: 42px;
+    height: 42px;
     place-items: center;
     color: var(--muted);
+    background: transparent;
+    border: 0;
     border-radius: 0.5rem;
     cursor: pointer;
-    font-size: 1.2rem;
+    font-size: 1.5rem;
+    touch-action: manipulation;
 }
 
-.attachment-button:hover {
+.attachment-button:hover,
+.attachment-button:focus-visible {
     color: var(--coride);
     background: var(--soft-pink);
 }
 
 .compose-box input[type="file"] {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 .send-form textarea,

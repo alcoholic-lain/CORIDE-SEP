@@ -28,6 +28,13 @@
     let localStream = null;
     let signalCursor = 0;
     let busy = false;
+    let syncing = false;
+    let ringtoneContext = null;
+    let ringtoneTimer = null;
+    let ringtoneShouldPlay = false;
+    let ringtoneResumePending = false;
+    let ringtoneNeedsGesture = false;
+    const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
 
     async function request(url, method = "GET", data = null, keepalive = false) {
         const headers = {};
@@ -49,9 +56,108 @@
         errorBox.textContent = message;
     }
 
+    function ringBurst() {
+        if (!ringtoneShouldPlay || !ringtoneContext
+            || ringtoneContext.state !== "running") return;
+        const startAt = ringtoneContext.currentTime;
+        [0, 0.8].forEach((offset) => {
+            const gain = ringtoneContext.createGain();
+            const toneStart = startAt + offset;
+            gain.gain.setValueAtTime(0.0001, toneStart);
+            gain.gain.exponentialRampToValueAtTime(0.045, toneStart + 0.05);
+            gain.gain.setValueAtTime(0.045, toneStart + 0.55);
+            gain.gain.exponentialRampToValueAtTime(0.0001, toneStart + 0.65);
+            gain.connect(ringtoneContext.destination);
+            [440, 480].forEach((frequency) => {
+                const oscillator = ringtoneContext.createOscillator();
+                oscillator.frequency.value = frequency;
+                oscillator.connect(gain);
+                oscillator.start(toneStart);
+                oscillator.stop(toneStart + 0.66);
+            });
+        });
+    }
+
+    function beginRingtone() {
+        if (!ringtoneShouldPlay || ringtoneTimer) return;
+        ringtoneNeedsGesture = false;
+        ringBurst();
+        ringtoneTimer = window.setInterval(ringBurst, 4000);
+    }
+
+    function startRingtone() {
+        ringtoneShouldPlay = true;
+        if (!AudioContextConstructor) {
+            ringtoneNeedsGesture = true;
+            updateInterface();
+            return;
+        }
+        if (!ringtoneContext) ringtoneContext = new AudioContextConstructor();
+        if (ringtoneContext.state === "running") {
+            beginRingtone();
+            return;
+        }
+        ringtoneNeedsGesture = true;
+        if (ringtoneResumePending) return;
+        ringtoneResumePending = true;
+        ringtoneContext.resume().then(() => {
+            ringtoneResumePending = false;
+            if (ringtoneShouldPlay) beginRingtone();
+            updateInterface();
+        }).catch(() => {
+            ringtoneResumePending = false;
+            updateInterface();
+        });
+    }
+
+    function stopRingtone() {
+        ringtoneShouldPlay = false;
+        ringtoneNeedsGesture = false;
+        if (ringtoneTimer) window.clearInterval(ringtoneTimer);
+        ringtoneTimer = null;
+    }
+
+    function unlockRingtone() {
+        if (!AudioContextConstructor) return;
+        if (!ringtoneContext) ringtoneContext = new AudioContextConstructor();
+        if (ringtoneContext.state === "running" || ringtoneResumePending) return;
+        ringtoneResumePending = true;
+        ringtoneContext.resume().then(() => {
+            ringtoneResumePending = false;
+            ringtoneNeedsGesture = false;
+            if (ringtoneShouldPlay) beginRingtone();
+            updateInterface();
+        }).catch(() => {
+            ringtoneResumePending = false;
+            updateInterface();
+        });
+    }
+
+    function updateRingtone() {
+        const incoming = Boolean(
+            call
+            && !joined
+            && !call.joined
+            && !call.previously_joined
+            && call.started_by !== participantId
+        );
+        if (incoming) startRingtone();
+        else stopRingtone();
+    }
+
     function updateInterface() {
         const isJoined = joined && Boolean(call);
         const callActive = Boolean(call);
+        const incoming = Boolean(
+            call
+            && !joined
+            && !call.joined
+            && !call.previously_joined
+            && call.started_by !== participantId
+        );
+        const caller = call?.participants.find(
+            (member) => member.id === call.started_by
+        );
         const names = call
             ? call.participants.map((member) => (
                 member.id === participantId ? "You" : member.name
@@ -60,7 +166,15 @@
         participantsLabel.textContent = names.join(" · ");
         actionButton.hidden = isJoined;
         actionButton.disabled = busy || !callEnabled;
-        actionButton.textContent = callActive ? "Join call" : "Start call";
+        actionButton.textContent = !callActive
+            ? "Start call"
+            : call.joined
+                ? "Reconnect"
+                : call.previously_joined
+                    ? "Rejoin call"
+                    : incoming
+                        ? "Answer"
+                        : "Join call";
         muteButton.hidden = !isJoined;
         leaveButton.hidden = !isJoined;
         toggle.setAttribute("aria-expanded", String(!panel.hidden));
@@ -70,6 +184,15 @@
                 : "Calls are unavailable in a closed chat.";
         } else if (isJoined) {
             status.textContent = "Connected to the voice call.";
+        } else if (incoming) {
+            status.textContent = `Incoming call${caller ? ` from ${caller.name}` : ""}.`;
+            if (ringtoneNeedsGesture) {
+                status.textContent += " Tap anywhere to enable the ringtone.";
+            }
+        } else if (callActive && call.joined) {
+            status.textContent = "This account is already in the call in another tab.";
+        } else if (callActive && call.previously_joined) {
+            status.textContent = "You left this call. Rejoin when you’re ready.";
         } else if (callActive) {
             status.textContent = "A voice call is in progress.";
         } else {
@@ -144,6 +267,7 @@
         const peer = createPeer(signal.sender);
         const connection = peer.connection;
         if (signal.type === "offer") {
+            if (connection.signalingState !== "stable") return;
             await connection.setRemoteDescription(
                 new RTCSessionDescription(signal.payload)
             );
@@ -152,6 +276,7 @@
             await connection.setLocalDescription(answer);
             await sendSignal(signal.sender, "answer", connection.localDescription);
         } else if (signal.type === "answer") {
+            if (connection.signalingState !== "have-local-offer") return;
             await connection.setRemoteDescription(
                 new RTCSessionDescription(signal.payload)
             );
@@ -188,17 +313,25 @@
     }
 
     async function syncCall() {
-        const result = await request(callUrl, "POST", {
-            action: "sync",
-            after: signalCursor
-        });
-        call = result.call;
-        await updatePeers(call.participants);
-        for (const signal of result.signals) {
-            signalCursor = signal.id;
-            await handleSignal(signal);
+        if (!joined || syncing) return;
+        syncing = true;
+        try {
+            const result = await request(callUrl, "POST", {
+                action: "sync",
+                after: signalCursor
+            });
+            if (!joined) return;
+            call = result.call;
+            updateRingtone();
+            await updatePeers(call.participants);
+            for (const signal of result.signals) {
+                signalCursor = signal.id;
+                await handleSignal(signal);
+            }
+            updateInterface();
+        } finally {
+            syncing = false;
         }
-        updateInterface();
     }
 
     async function refreshCallState() {
@@ -206,6 +339,7 @@
         try {
             const result = await request(stateUrl);
             call = result.call;
+            updateRingtone();
             updateInterface();
         } catch (error) {
             showError(error.message);
@@ -233,6 +367,7 @@
             );
             call = result.call;
             joined = true;
+            updateRingtone();
             signalCursor = 0;
             updateInterface();
             await syncCall();
@@ -257,6 +392,7 @@
             localStream = null;
         }
         joined = false;
+        updateRingtone();
         muteButton.textContent = "Mute";
         updateInterface();
     }
@@ -290,6 +426,8 @@
         muteButton.textContent = shouldMute ? "Unmute" : "Mute";
     });
     leaveButton.addEventListener("click", leaveCall);
+    document.addEventListener("pointerdown", unlockRingtone);
+    document.addEventListener("keydown", unlockRingtone);
 
     window.setInterval(() => {
         if (!joined || busy) return;
@@ -300,6 +438,8 @@
     }, 1000);
     window.setInterval(refreshCallState, 3000);
     window.addEventListener("pagehide", () => {
+        stopRingtone();
+        if (ringtoneContext) ringtoneContext.close();
         if (!joined) return;
         fetch(callUrl, {
             method: "POST",

@@ -667,6 +667,7 @@ def _voice_call_state(call, participant, now=None):
     )
     return {
         "id": call.pk,
+        "started_by": call.started_by_id,
         "participants": [
             {
                 "id": member.participant_id,
@@ -678,6 +679,9 @@ def _voice_call_state(call, participant, now=None):
             member.participant_id == participant.pk
             for member in active_participants
         ),
+        "previously_joined": call.participants.filter(
+            participant=participant,
+        ).exists(),
     }
 
 

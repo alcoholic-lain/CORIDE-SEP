@@ -741,13 +741,24 @@ class VoiceCallTests(CommunicationTestCase):
             started.json()["call"]["participants"][0]["id"],
             self.passenger_participant.pk,
         )
-
         self.assertEqual(
-            self.guest.get(self.state_url).json()["call"]["participants"][0]["id"],
+            started.json()["call"]["started_by"],
             self.passenger_participant.pk,
         )
+        self.assertTrue(started.json()["call"]["joined"])
+
+        ringing = self.guest.get(self.state_url).json()["call"]
+        self.assertEqual(
+            ringing["participants"][0]["id"],
+            self.passenger_participant.pk,
+        )
+        self.assertEqual(ringing["started_by"], self.passenger_participant.pk)
+        self.assertFalse(ringing["joined"])
+        self.assertFalse(ringing["previously_joined"])
         joined = self.post_action(self.guest, "join")
         self.assertEqual(joined.status_code, 200)
+        self.assertTrue(joined.json()["call"]["joined"])
+        self.assertTrue(joined.json()["call"]["previously_joined"])
         self.assertEqual(call.participants.count(), 2)
 
         signal = self.post_action(

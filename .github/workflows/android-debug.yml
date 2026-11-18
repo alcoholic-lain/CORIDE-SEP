@@ -4,19 +4,19 @@ on:
   push:
     branches:
       - master
-      - communication
+      - m1
       - mobile
     tags:
       - "v*"
   pull_request:
     branches:
       - master
-      - communication
+      - m1
       - mobile
   workflow_dispatch:
     inputs:
       server_url:
-        description: "Optional server origin; omit to discover CoRide on the local network"
+        description: "Optional server origin; omit to discover Kizuna on the local network"
         required: false
         type: string
 
@@ -95,9 +95,9 @@ jobs:
             exit 0
           fi
 
-          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/coride-debug.keystore"
-          chmod 600 "$RUNNER_TEMP/coride-debug.keystore"
-          echo "MOBILE_DEBUG_KEYSTORE=$RUNNER_TEMP/coride-debug.keystore" >> "$GITHUB_ENV"
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/kizuna-debug.keystore"
+          chmod 600 "$RUNNER_TEMP/kizuna-debug.keystore"
+          echo "MOBILE_DEBUG_KEYSTORE=$RUNNER_TEMP/kizuna-debug.keystore" >> "$GITHUB_ENV"
           echo "configured=true" >> "$GITHUB_OUTPUT"
 
       - name: Build debug APK
@@ -112,7 +112,7 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: coride-android-debug
+          name: kizuna-android-debug
           path: mobile/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -130,7 +130,7 @@ jobs:
       - name: Download debug APK
         uses: actions/download-artifact@v4
         with:
-          name: coride-android-debug
+          name: kizuna-android-debug
           path: release
 
       - name: Publish stable release
@@ -138,7 +138,7 @@ jobs:
         with:
           tag_name: ${{ needs.build.outputs.tag_name }}
           target_commitish: ${{ github.sha }}
-          name: "CoRide Android ${{ needs.build.outputs.version_name }}"
+          name: "Kizuna Android ${{ needs.build.outputs.version_name }}"
           body: |
             Automated Android APK release.
             Version code: ${{ needs.build.outputs.version_code }}

@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ title }} | Kizuna</title>
-    <link rel="icon" type="image/png" href="{% static 'kitty.png' %}">
+    <link rel="icon" type="image/svg+xml" href="{% static 'kizuna/icon.svg' %}">
     <style>
         :root {
             color-scheme: light;
@@ -27,29 +27,15 @@
             text-align: center;
         }
 
-        .mascot {
-            position: relative;
+        .logo {
             display: grid;
-            min-height: 270px;
             place-items: center;
+            min-height: 140px;
         }
 
-        .mascot::before {
-            position: absolute;
-            z-index: 0;
-            color: rgb(23 47 70 / 8%);
-            content: "{{ title }}";
-            font-size: clamp(2.5rem, 11vw, 5rem);
-            font-weight: 800;
-            white-space: nowrap;
-        }
-
-        img {
-            position: relative;
-            z-index: 1;
-            width: min(230px, 60vw);
+        .logo img {
+            width: min(320px, 70vw);
             height: auto;
-            image-rendering: pixelated;
         }
 
         h1 {
@@ -60,15 +46,37 @@
             margin: 0;
             color: #60778a;
         }
+
+        footer {
+            margin-top: 2.5rem;
+            display: grid;
+            place-items: center;
+            gap: 0.5rem;
+        }
+
+        footer img {
+            height: 32px;
+            width: auto;
+            opacity: 0.85;
+        }
+
+        footer span {
+            font-size: 0.75rem;
+            color: #8694a0;
+        }
     </style>
 </head>
 <body>
     <main>
-        <div class="mascot">
-            <img src="{% static 'kitty.png' %}" alt="Mascotte pixel art Kizuna">
+        <div class="logo">
+            <img src="{% static 'kizuna/logo.svg' %}" alt="Kizuna">
         </div>
         <h1>{{ title }}</h1>
         <p>{{ hint }}</p>
+        <footer>
+            <img src="{% static 'kizuna/partners/esprit-light.png' %}" alt="Esprit">
+            <span>Built at Esprit</span>
+        </footer>
     </main>
 </body>
 </html>

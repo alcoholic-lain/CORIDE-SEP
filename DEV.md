@@ -84,7 +84,7 @@ The `mobile` folder is the native Kotlin Android Studio project. Open `mobile` d
 
 ### Django static files on Vercel
 
-Shared assets such as `assets/kitty.png` are collected into `STATIC_ROOT` during Vercel's build and served from `STATIC_URL` by the Vercel CDN. Keep `STATIC_ROOT` configured in `config/settings.py`; Django templates should reference assets with the `{% static %}` template tag.
+Shared assets such as `assets/kizuna/logo.svg` are collected into `STATIC_ROOT` during Vercel's build and served from `STATIC_URL` by the Vercel CDN. Keep `STATIC_ROOT` configured in `config/settings.py`; Django templates should reference assets with the `{% static %}` template tag.
 
 ### Turso database on Vercel
 

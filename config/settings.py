@@ -74,12 +74,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'utilisateurs.apps.UtilisateursConfig',
-    'vehicules.apps.VehiculesConfig',
-    'trajets.apps.TrajetsConfig',
-    'reservations.apps.ReservationsConfig',
-    'communication.apps.CommunicationConfig',
-    'CORIDE.apps.CorideConfig',
+    'm4.apps.M4Config',
+    'm5.apps.M5Config',
+    'm3.apps.M3Config',
+    'm2.apps.M2Config',
+    'm1.apps.M1Config',
+    'kizuna.apps.KizunaConfig',
 ]
 
 MIDDLEWARE = [
@@ -97,7 +97,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -114,12 +114,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 def _get_database_config(environ, base_dir):
     uses_persistent_production_database = environ.get("VERCEL_ENV") == "production" and (
-        "CORIDE_TURSO_DATABASE_URL" in environ
-        or "CORIDE_TURSO_AUTH_TOKEN" in environ
+        "KIZUNA_TURSO_DATABASE_URL" in environ
+        or "KIZUNA_TURSO_AUTH_TOKEN" in environ
     )
     if uses_persistent_production_database:
-        database_url = environ.get("CORIDE_TURSO_DATABASE_URL", "").strip()
-        auth_token = environ.get("CORIDE_TURSO_AUTH_TOKEN", "").strip()
+        database_url = environ.get("KIZUNA_TURSO_DATABASE_URL", "").strip()
+        auth_token = environ.get("KIZUNA_TURSO_AUTH_TOKEN", "").strip()
     else:
         database_url = environ.get("TURSO_DATABASE_URL", "").strip()
         auth_token = environ.get("TURSO_AUTH_TOKEN", "").strip()
@@ -160,8 +160,8 @@ def _get_database_config(environ, base_dir):
         )
     if environ.get("VERCEL"):
         raise ImproperlyConfigured(
-            "Configure stable CORIDE_TURSO_DATABASE_URL and "
-            "CORIDE_TURSO_AUTH_TOKEN for Production, or TURSO_DATABASE_URL and "
+            "Configure stable KIZUNA_TURSO_DATABASE_URL and "
+            "KIZUNA_TURSO_AUTH_TOKEN for Production, or TURSO_DATABASE_URL and "
             "TURSO_AUTH_TOKEN for other Vercel environments."
         )
 
@@ -200,22 +200,22 @@ def _get_storages(environ):
     }
 
 
-def _get_communication_ice_servers(environ):
-    value = environ.get("CORIDE_COMMUNICATION_ICE_SERVERS", "").strip()
+def _get_ice_servers(environ):
+    value = environ.get("KIZUNA_ICE_SERVERS", "").strip()
     if not value:
         return [{"urls": "stun:stun.l.google.com:19302"}]
     try:
         servers = json.loads(value)
     except json.JSONDecodeError as error:
         raise ImproperlyConfigured(
-            "CORIDE_COMMUNICATION_ICE_SERVERS must be a JSON list."
+            "KIZUNA_ICE_SERVERS must be a JSON list."
         ) from error
     if not isinstance(servers, list) or any(
         not isinstance(server, dict) or not server.get("urls")
         for server in servers
     ):
         raise ImproperlyConfigured(
-            "CORIDE_COMMUNICATION_ICE_SERVERS must be a JSON list of ICE servers."
+            "KIZUNA_ICE_SERVERS must be a JSON list of ICE servers."
         )
     return servers
 
@@ -266,7 +266,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 STORAGES = _get_storages(os.environ)
-COMMUNICATION_ICE_SERVERS = _get_communication_ice_servers(os.environ)
+ICE_SERVERS = _get_ice_servers(os.environ)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

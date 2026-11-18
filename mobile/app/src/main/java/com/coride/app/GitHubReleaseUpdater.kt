@@ -86,9 +86,9 @@ internal class GitHubReleaseUpdater {
         const val GITHUB_API_VERSION = "2022-11-28"
         const val GITHUB_HOST = "github.com"
         const val RELEASE_API_URL =
-            "https://api.github.com/repos/alcoholic-lain/CORIDE-SEP/releases/latest"
-        const val RELEASE_PAGE_PATH = "/alcoholic-lain/CORIDE-SEP/releases/tag/"
-        const val USER_AGENT = "CoRide-Android"
+            "https://api.github.com/repos/alcoholic-lain/KIZUNA/releases/latest"
+        const val RELEASE_PAGE_PATH = "/alcoholic-lain/KIZUNA/releases/tag/"
+        const val USER_AGENT = "Kizuna-Android"
         val VERSION_TAG = Regex("^v(\\d+)\\.(\\d+)\\.(\\d+)$")
     }
 }

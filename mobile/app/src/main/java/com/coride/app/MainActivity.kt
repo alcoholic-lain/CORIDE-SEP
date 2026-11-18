@@ -125,7 +125,7 @@ class MainActivity : Activity() {
             settings.blockNetworkLoads = true
             webViewClient = WebViewClient()
         }
-        val loaderHtml = assets.open("coride-loader.html").bufferedReader().use { it.readText() }
+        val loaderHtml = assets.open("kizuna-loader.html").bufferedReader().use { it.readText() }
         loaderWebView.loadDataWithBaseURL(
             "https://appassets.androidplatform.net/",
             loaderHtml,
@@ -264,7 +264,7 @@ class MainActivity : Activity() {
                     error: android.webkit.WebResourceError?,
                 ) {
                     if (isCurrentMainFrameRequest(request)) {
-                        Log.w(TAG, "CoRide page failed to load: ${error?.errorCode}")
+                        Log.w(TAG, "Kizuna page failed to load: ${error?.errorCode}")
                         handleServerUnavailable()
                     }
                 }
@@ -279,7 +279,7 @@ class MainActivity : Activity() {
                         errorResponse != null &&
                         errorResponse.statusCode >= 400
                     ) {
-                        Log.w(TAG, "CoRide returned HTTP ${errorResponse.statusCode}")
+                        Log.w(TAG, "Kizuna returned HTTP ${errorResponse.statusCode}")
                         handleServerUnavailable()
                     }
                 }
@@ -409,7 +409,7 @@ class MainActivity : Activity() {
         showLoading(getString(R.string.searching_for_server))
 
         val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        multicastLock = wifiManager.createMulticastLock("CoRide discovery").apply {
+        multicastLock = wifiManager.createMulticastLock("Kizuna discovery").apply {
             setReferenceCounted(false)
             acquire()
         }
@@ -456,7 +456,7 @@ class MainActivity : Activity() {
                                 failedServiceInfo: NsdServiceInfo,
                                 errorCode: Int,
                             ) {
-                                Log.w(TAG, "Could not resolve CoRide service: $errorCode")
+                                Log.w(TAG, "Could not resolve Kizuna service: $errorCode")
                                 mainHandler.post {
                                     if (generation == discoveryGeneration) {
                                         resolvingService = false
@@ -474,7 +474,7 @@ class MainActivity : Activity() {
             override fun onDiscoveryStopped(serviceType: String) = Unit
 
             override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-                Log.e(TAG, "CoRide discovery failed to start: $errorCode")
+                Log.e(TAG, "Kizuna discovery failed to start: $errorCode")
                 mainHandler.post {
                     if (generation == discoveryGeneration) {
                         discoveryListener = null
@@ -486,7 +486,7 @@ class MainActivity : Activity() {
             }
 
             override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
-                Log.e(TAG, "CoRide discovery failed to stop: $errorCode")
+                Log.e(TAG, "Kizuna discovery failed to stop: $errorCode")
             }
         }
         discoveryListener = listener
@@ -498,13 +498,13 @@ class MainActivity : Activity() {
                 listener,
             )
         } catch (error: IllegalArgumentException) {
-            Log.e(TAG, "Invalid CoRide discovery service type", error)
+            Log.e(TAG, "Invalid Kizuna discovery service type", error)
             discoveryListener = null
             releaseMulticastLock()
             fallbackToHostedServer()
             return
         } catch (error: SecurityException) {
-            Log.e(TAG, "Permission denied while discovering CoRide", error)
+            Log.e(TAG, "Permission denied while discovering Kizuna", error)
             discoveryListener = null
             releaseMulticastLock()
             fallbackToHostedServer()
@@ -529,7 +529,7 @@ class MainActivity : Activity() {
             try {
                 nsdManager.stopServiceDiscovery(listener)
             } catch (error: IllegalArgumentException) {
-                Log.w(TAG, "CoRide service discovery was already stopped", error)
+                Log.w(TAG, "Kizuna service discovery was already stopped", error)
             }
         }
         releaseMulticastLock()
@@ -703,39 +703,39 @@ class MainActivity : Activity() {
             """
                 :root {
                     color-scheme: dark !important;
-                    --coride-surface: #1c1f26;
-                    --coride-text: #f4f3ee;
-                    --coride-muted: #c0c7d0;
+                    --kizuna-surface: #1c1f26;
+                    --kizuna-text: #f4f3ee;
+                    --kizuna-muted: #c0c7d0;
                 }
                 html, body {
-                    background: var(--coride-surface) !important;
-                    color: var(--coride-text) !important;
+                    background: var(--kizuna-surface) !important;
+                    color: var(--kizuna-text) !important;
                 }
-                p { color: var(--coride-muted) !important; }
+                p { color: var(--kizuna-muted) !important; }
                 .mascot::before { color: rgb(244 243 238 / 8%) !important; }
             """.trimIndent()
         } else {
             """
                 :root {
                     color-scheme: light !important;
-                    --coride-surface: #f2f7f6;
-                    --coride-text: #172f46;
-                    --coride-muted: #60778a;
+                    --kizuna-surface: #f2f7f6;
+                    --kizuna-text: #172f46;
+                    --kizuna-muted: #60778a;
                 }
                 html, body {
-                    background: var(--coride-surface) !important;
-                    color: var(--coride-text) !important;
+                    background: var(--kizuna-surface) !important;
+                    color: var(--kizuna-text) !important;
                 }
-                p { color: var(--coride-muted) !important; }
+                p { color: var(--kizuna-muted) !important; }
                 .mascot::before { color: rgb(23 47 70 / 8%) !important; }
             """.trimIndent()
         }
         val script = """
             (function() {
-                var style = document.getElementById('coride-android-theme');
+                var style = document.getElementById('kizuna-android-theme');
                 if (!style) {
                     style = document.createElement('style');
-                    style.id = 'coride-android-theme';
+                    style.id = 'kizuna-android-theme';
                     (document.head || document.documentElement).appendChild(style);
                 }
                 style.textContent = ${JSONObject.quote(css)};
@@ -826,7 +826,7 @@ class MainActivity : Activity() {
     private fun navigateToRoute(path: String) {
         val origin = currentServerOrigin
         if (origin == null) {
-            Log.w(TAG, "Cannot open CoRide route without a connected server")
+            Log.w(TAG, "Cannot open Kizuna route without a connected server")
             return
         }
         loadServer("$origin$path", isFallback = loadingFallback)
@@ -863,7 +863,7 @@ class MainActivity : Activity() {
                     if (!isDestroyed) updateCheckInProgress = false
                 }
             }
-        }, "CoRide-release-check").start()
+        }, "Kizuna-release-check").start()
     }
 
     private fun promptToOpenReleasePage(update: GitHubReleaseUpdater.AvailableUpdate) {
@@ -890,17 +890,17 @@ class MainActivity : Activity() {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(releaseUrl)))
         } catch (error: android.content.ActivityNotFoundException) {
-            Log.e(TAG, "No browser is available to open the CoRide release page", error)
+            Log.e(TAG, "No browser is available to open the Kizuna release page", error)
             Toast.makeText(this, R.string.release_page_unavailable, Toast.LENGTH_LONG).show()
         }
     }
 
     private companion object {
-        const val SERVICE_TYPE = "_coride._tcp."
+        const val SERVICE_TYPE = "_kizuna._tcp."
         const val DISCOVERY_TIMEOUT_MS = 15_000L
         const val PROMPTED_UPDATE_VERSION_KEY = "prompted_update_version"
         const val UPDATE_CHECK_INTERVAL_MS = 120_000L
-        const val FALLBACK_URL = "https://coride-sep.vercel.app/"
-        const val TAG = "CoRide"
+        const val FALLBACK_URL = "https://your-deployment.vercel.app/"
+        const val TAG = "Kizuna"
     }
 }

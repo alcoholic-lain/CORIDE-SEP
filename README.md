@@ -1,44 +1,31 @@
-# CoRide
+# Kizuna
 
-CoRide est une plateforme de covoiturage qui met en relation conducteurs et passagers pour des trajets plus simples, sûrs et économiques.
-
-## Utilisateurs
-
-- **Passagers** : recherchent un trajet et réservent une place.
-- **Conducteurs** : publient leurs trajets et gèrent les réservations.
-- **Administrateurs** : vérifient les comptes et modèrent la plateforme.
+Kizuna is a Django hackathon template with five placeholder modules (M1–M5) and a shared core app, ready to be rebranded and filled in with your team's features.
 
 ## Modules
 
-| Module | Fonction | Responsable |
+| Module | Function | Owner |
 |---|---|---|
-| Utilisateurs | Comptes, profils et vérification | Alaaeddine Guouider |
-| Véhicules | Véhicules et documents | Abdallah Salhi |
-| Trajets | Publication et recherche de trajets | Wasim Snoussi |
-| Réservations | Places, paiements et suivi | Selim Aschi |
-| Communication | Messagerie et avis | Ahmed Ridha Lazhari |
+| M1 | Messaging and reviews (chat, guest mode, voice calls) | — |
+| M2 | Placeholder module | — |
+| M3 | Placeholder module | — |
+| M4 | Placeholder module | — |
+| M5 | Placeholder module | — |
 
-## État du projet
+## Project state
 
-La plupart des modules sont encore des squelettes. Le module Communication comprend maintenant le chat invité et les fonctionnalités de retour. Consultez le journal, la spécification et l’aperçu de chaque application :
+Most modules are still scaffolds. M1 ships a working guest chat with reviews/moderation as a reference implementation. See each app's log, spec, and preview:
 
-| Application | Journal | Spécification | Capture |
+| App | Log | Spec | Preview |
 |---|---|---|---|
-| CoRide | [AI.log](CORIDE/AI.log) | — | [Capture](CORIDE/screenshots/home.png) |
-| Utilisateurs | [AI.log](utilisateurs/AI.log) | [Spécification](utilisateurs/01_user-management.md) | [Capture](utilisateurs/screenshots/users.png) |
-| Véhicules | [AI.log](vehicules/AI.log) | [Spécification](vehicules/02_vehicle-management.md) | [Capture](vehicules/screenshots/vehicles.png) |
-| Trajets | [AI.log](trajets/AI.log) | [Spécification](trajets/03_trip-management.md) | [Capture](trajets/screenshots/trips.png) |
-| Réservations | [AI.log](reservations/AI.log) | [Spécification](reservations/04_reservation-management.md) | [Capture](reservations/screenshots/reservations.png) |
-| Communication | [AI.log](communication/AI.log) | [Spécification](communication/05_communication-feedback.md) | [Capture](communication/screenshots/coms.png) |
+| kizuna (core) | [AI.log](kizuna/AI.log) | — | [preview](kizuna/screenshots/home.png) |
+| M1 | [AI.log](m1/AI.log) | [spec](m1/05_communication-feedback.md) | [preview](m1/screenshots/coms.png) |
+| M2 | [AI.log](m2/AI.log) | [spec](m2/04_reservation-management.md) | [preview](m2/screenshots/reservations.png) |
+| M3 | [AI.log](m3/AI.log) | [spec](m3/03_trip-management.md) | [preview](m3/screenshots/trips.png) |
+| M4 | [AI.log](m4/AI.log) | [spec](m4/01_user-management.md) | [preview](m4/screenshots/users.png) |
+| M5 | [AI.log](m5/AI.log) | [spec](m5/02_vehicle-management.md) | [preview](m5/screenshots/vehicles.png) |
 
-## Fonctionnalités prévues
+## Development
 
-- Recherche de trajets et gestion des réservations.
-- Vérification des comptes et des documents.
-- Messagerie, évaluations et modération.
-- Assistance par IA pour la vérification, les prix et les recommandations.
-
-## Développement
-
-Consultez [DEV.md](DEV.md) pour installer et lancer le projet.
-Le client Android natif se trouve dans `mobile/`; ses instructions de test sont également documentées dans [DEV.md](DEV.md).
+See [DEV.md](DEV.md) to install and run the project.
+The native Android client lives in `mobile/`; its test instructions are also documented in [DEV.md](DEV.md).

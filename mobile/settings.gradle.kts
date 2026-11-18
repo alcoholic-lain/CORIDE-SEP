@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "CoRide"
+rootProject.name = "Kizuna"
 include(":app")

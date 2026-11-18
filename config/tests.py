@@ -21,8 +21,8 @@ class VercelSettingsTests(SimpleTestCase):
         hosts = _get_allowed_hosts(
             {
                 "DJANGO_ALLOWED_HOSTS": "localhost, example.com",
-                "VERCEL_URL": "coride-git-mobile.vercel.app",
-                "VERCEL_PROJECT_PRODUCTION_URL": "coride-five.vercel.app",
+                "VERCEL_URL": "kizuna-git-mobile.vercel.app",
+                "VERCEL_PROJECT_PRODUCTION_URL": "kizuna-five.vercel.app",
             }
         )
 
@@ -31,8 +31,8 @@ class VercelSettingsTests(SimpleTestCase):
             [
                 "localhost",
                 "example.com",
-                "coride-git-mobile.vercel.app",
-                "coride-five.vercel.app",
+                "kizuna-git-mobile.vercel.app",
+                "kizuna-five.vercel.app",
             ],
         )
 
@@ -78,8 +78,8 @@ class VercelSettingsTests(SimpleTestCase):
                 "VERCEL_ENV": "production",
                 "TURSO_DATABASE_URL": "libsql://deployment-branch.turso.io",
                 "TURSO_AUTH_TOKEN": "deployment-token",
-                "CORIDE_TURSO_DATABASE_URL": "libsql://stable.turso.io",
-                "CORIDE_TURSO_AUTH_TOKEN": "stable-token",
+                "KIZUNA_TURSO_DATABASE_URL": "libsql://stable.turso.io",
+                "KIZUNA_TURSO_AUTH_TOKEN": "stable-token",
             },
             Path("/project"),
         )
@@ -94,8 +94,8 @@ class VercelSettingsTests(SimpleTestCase):
                 "VERCEL_ENV": "preview",
                 "TURSO_DATABASE_URL": "libsql://preview-branch.turso.io",
                 "TURSO_AUTH_TOKEN": "preview-token",
-                "CORIDE_TURSO_DATABASE_URL": "libsql://stable.turso.io",
-                "CORIDE_TURSO_AUTH_TOKEN": "stable-token",
+                "KIZUNA_TURSO_DATABASE_URL": "libsql://stable.turso.io",
+                "KIZUNA_TURSO_AUTH_TOKEN": "stable-token",
             },
             Path("/project"),
         )

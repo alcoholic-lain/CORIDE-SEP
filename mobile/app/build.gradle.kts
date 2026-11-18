@@ -22,7 +22,7 @@ abstract class PrepareLoaderAsset : DefaultTask() {
 
     @TaskAction
     fun copyLoaderHtml() {
-        val destination = outputDirectory.file("coride-loader.html").get().asFile
+        val destination = outputDirectory.file("kizuna-loader.html").get().asFile
         destination.parentFile.mkdirs()
         loaderHtml.get().asFile.copyTo(destination, overwrite = true)
     }
@@ -70,8 +70,8 @@ if (mobileDebugKeystore.isNotEmpty()) {
 }
 
 val prepareLoaderAsset = tasks.register<PrepareLoaderAsset>("prepareCorideLoaderAsset") {
-    loaderHtml.set(rootProject.file("../coride-loader.html"))
-    outputDirectory.set(layout.buildDirectory.dir("generated/coride-loader-assets"))
+    loaderHtml.set(rootProject.file("../kizuna-loader.html"))
+    outputDirectory.set(layout.buildDirectory.dir("generated/kizuna-loader-assets"))
 }
 
 android {

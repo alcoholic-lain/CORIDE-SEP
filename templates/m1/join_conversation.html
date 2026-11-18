@@ -1,0 +1,48 @@
+{% extends "m1/base.html" %}
+
+{% block title %}Join chat{% endblock %}
+{% block body_class %}chat-theme{% endblock %}
+
+{% block content %}
+<section class="form-card join-card">
+    <p class="eyebrow">YOU'RE INVITED</p>
+    <h1>{{ conversation.title|default:"A Kizuna conversation" }}</h1>
+    <p class="muted">
+        {% if conversation.chat_type == "GROUP" %}
+            Join the group and pick up the conversation.
+        {% else %}
+            Join this private chat and say hello.
+        {% endif %}
+    </p>
+    <span class="invite-type">
+        {% if conversation.chat_type == "GROUP" %}Group conversation{% else %}Private conversation{% endif %}
+    </span>
+    {% if join_error %}<p class="form-error" role="alert">{{ join_error }}</p>{% endif %}
+    {% if can_join %}
+        {% if participant %}
+            {% if already_participant %}
+                <a class="button" href="{% url 'm1:conversation_detail' conversation.id %}">Open chat</a>
+            {% else %}
+                <form method="post">
+                    {% csrf_token %}
+                    <button class="button" type="submit">Join chat</button>
+                </form>
+            {% endif %}
+        {% elif guest_mode_enabled %}
+            <form method="post">
+                {% csrf_token %}
+                <label for="{{ name_form.display_name.id_for_label }}">Your name</label>
+                {{ name_form.display_name }}
+                {{ name_form.display_name.errors }}
+                <p class="muted">This is how people in the chat will see you.</p>
+                <button class="button" type="submit">Join chat</button>
+            </form>
+        {% else %}
+            <div class="mode-notice">
+                <strong>Sign in to join this chat.</strong>
+                <p>Guest access is disabled.</p>
+            </div>
+        {% endif %}
+    {% endif %}
+</section>
+{% endblock %}

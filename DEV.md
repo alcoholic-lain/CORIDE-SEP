@@ -22,28 +22,28 @@ Open `http://127.0.0.1:8000/`. Django reloads Python and template changes automa
 
 | Area | URL | Django app |
 |---|---|---|
-| CoRide landing page | `/` | `CORIDE` |
-| Users | `/users/` | `utilisateurs` |
-| Vehicles | `/vehicles/` | `vehicules` |
-| Trips | `/trips/` | `trajets` |
-| Reservations | `/reservations/` | `reservations` |
-| Communication | `/coms/` | `communication` |
+| Kizuna landing page | `/` | `kizuna` |
+| M1 | `/m1/` | `m1` |
+| M2 | `/m2/` | `m2` |
+| M3 | `/m3/` | `m3` |
+| M4 | `/m4/` | `m4` |
+| M5 | `/m5/` | `m5` |
 | Django admin | `/admin/` | Django admin |
 
-Add routes in each app's `urls.py`; project-level prefixes are wired in `config/urls.py`. Views belong in the app's `views.py`. Shared landing-page templates are in `CORIDE/`, and shared static assets are in `assets/`.
+Add routes in each app's `urls.py`; project-level prefixes are wired in `config/urls.py`. Views belong in the app's `views.py`. Shared landing-page templates are in `kizuna/`, and shared static assets are in `assets/`.
 
 ## Module documentation
 
-Most module pages are still scaffolds; communication currently includes guest chat and feedback features. Each app has a current-state log, specification and screenshot:
+Most module pages are still scaffolds; M1 currently includes guest chat and feedback features as a reference implementation. Each app has a current-state log, specification and screenshot:
 
 | App | Current state | Specification | Screenshot |
 |---|---|---|---|
-| CoRide | [AI.log](CORIDE/AI.log) | — | [home](CORIDE/screenshots/home.png) |
-| Users | [AI.log](utilisateurs/AI.log) | [requirements](utilisateurs/01_user-management.md) | [preview](utilisateurs/screenshots/users.png) |
-| Vehicles | [AI.log](vehicules/AI.log) | [requirements](vehicules/02_vehicle-management.md) | [preview](vehicules/screenshots/vehicles.png) |
-| Trips | [AI.log](trajets/AI.log) | [requirements](trajets/03_trip-management.md) | [preview](trajets/screenshots/trips.png) |
-| Reservations | [AI.log](reservations/AI.log) | [requirements](reservations/04_reservation-management.md) | [preview](reservations/screenshots/reservations.png) |
-| Communication | [AI.log](communication/AI.log) | [requirements](communication/05_communication-feedback.md) | [preview](communication/screenshots/coms.png) |
+| Kizuna | [AI.log](kizuna/AI.log) | — | [home](kizuna/screenshots/home.png) |
+| M1 | [AI.log](m1/AI.log) | [requirements](m1/05_communication-feedback.md) | [preview](m1/screenshots/coms.png) |
+| M2 | [AI.log](m2/AI.log) | [requirements](m2/04_reservation-management.md) | [preview](m2/screenshots/reservations.png) |
+| M3 | [AI.log](m3/AI.log) | [requirements](m3/03_trip-management.md) | [preview](m3/screenshots/trips.png) |
+| M4 | [AI.log](m4/AI.log) | [requirements](m4/01_user-management.md) | [preview](m4/screenshots/users.png) |
+| M5 | [AI.log](m5/AI.log) | [requirements](m5/02_vehicle-management.md) | [preview](m5/screenshots/vehicles.png) |
 
 ## Common Django commands
 
@@ -61,7 +61,7 @@ uv run manage.py migrate
 
 # Run all tests or only one app's tests
 uv run manage.py test
-uv run manage.py test trajets
+uv run manage.py test m3
 
 # Open the Django shell or create an admin login
 uv run manage.py shell
@@ -94,7 +94,7 @@ For local development, the default remains `db.sqlite3`. To connect locally to T
 
 ### Private chat attachments on Vercel
 
-Chat attachments use a **Private** Vercel Blob store so only authorized conversation participants can download them through Django. Connect the store to the project’s Production, Preview, and Development environments; Vercel supplies `BLOB_STORE_ID` and OIDC credentials. For local imports and development, run `npx vercel@latest env pull .env.local` after connecting Development. Never paste or commit the token values. Local development without Blob credentials continues to use the ignored `media/` directory.
+Chat attachments use a **Private** Vercel Blob store so only authorized conversation participants can download them through Django. Connect the store to the project's Production, Preview, and Development environments; Vercel supplies `BLOB_STORE_ID` and OIDC credentials. For local imports and development, run `npx vercel@latest env pull .env.local` after connecting Development. Never paste or commit the token values. Local development without Blob credentials continues to use the ignored `media/` directory.
 
 ### Test on a phone over the same LAN
 
@@ -102,17 +102,17 @@ Chat attachments use a **Private** Vercel Blob store so only authorized conversa
 2. From the repository root, start the Django server and its local-network announcement:
 
    ```powershell
-   .\run-coride.ps1
+   .\run-kizuna.ps1
    ```
 
-   The script chooses the active private IPv4 address, sets `DJANGO_ALLOWED_HOSTS`, and runs `uv run manage.py corideserver`. It can also be called by absolute path from another working directory. The server advertises itself with mDNS; the app discovers that service instead of scanning IP addresses. Keep this command running while testing. If prompted, allow inbound TCP port 8000 and UDP port 5353 on the trusted private network.
-3. Open `mobile` in Android Studio, select the `app` run configuration and your connected phone, then click **Run**. The app connects to the advertised server automatically; there is no URL field. While searching and connecting, it displays the repository's `coride-loader.html` as a local Android asset; Gradle packages the file from the repository root, and the loader WebView blocks network requests. The installed version appears below the loader. The loader, native status text, offline screen, and system bars follow Android's light/dark theme. After each Django page loads, the app injects mobile-only CSS through JavaScript to match the page background and text to Android's current theme; the WebView stays hidden until the styling is applied. No browser controls or server address are shown. The mobile toolbar's menu opens the Django routes (`/`, `/users/`, `/vehicles/`, `/trips/`, `/reservations/`, and `/coms/`) on that same server. For local testing, keep Django running with `.\run-coride.ps1`; no Vercel testing is needed. The hosted CoRide fallback remains available if no LAN Django server is found, and a branded offline screen with a retry button appears if both servers are unreachable. After connecting, the app stops discovery and does not poll Django in the background.
+   The script chooses the active private IPv4 address, sets `DJANGO_ALLOWED_HOSTS`, and runs `uv run manage.py kizunaserver`. It can also be called by absolute path from another working directory. The server advertises itself with mDNS; the app discovers that service instead of scanning IP addresses. Keep this command running while testing. If prompted, allow inbound TCP port 8000 and UDP port 5353 on the trusted private network.
+3. Open `mobile` in Android Studio, select the `app` run configuration and your connected phone, then click **Run**. The app connects to the advertised server automatically; there is no URL field. While searching and connecting, it displays the repository's `kizuna-loader.html` as a local Android asset; Gradle packages the file from the repository root, and the loader WebView blocks network requests. The installed version appears below the loader. The loader, native status text, offline screen, and system bars follow Android's light/dark theme. After each Django page loads, the app injects mobile-only CSS through JavaScript to match the page background and text to Android's current theme; the WebView stays hidden until the styling is applied. No browser controls or server address are shown. The mobile toolbar's menu opens the Django routes (`/`, `/m1/`, `/m2/`, `/m3/`, `/m4/`, and `/m5/`) on that same server. For local testing, keep Django running with `.\run-kizuna.ps1`; no Vercel testing is needed. The hosted Kizuna fallback remains available if no LAN Django server is found, and a branded offline screen with a retry button appears if both servers are unreachable. After connecting, the app stops discovery and does not poll Django in the background.
 
 HTTP is unencrypted and enabled only in debug builds. Use it only on a trusted network and never send real credentials or sensitive data.
 
 ### Android CI/CD
 
-- Pushes and pull requests targeting `master`, `communication`, or `mobile`, plus manual **Android debug APK** workflow runs, build the Android project and upload the `coride-android-debug` APK artifact.
+- Pushes and pull requests targeting `master`, `m1`, or `mobile`, plus manual **Android debug APK** workflow runs, build the Android project and upload the `kizuna-android-debug` APK artifact.
 - Pushes to `mobile` build an APK and, with the persistent signing secret configured, publish a stable GitHub Release. The first automatic release starts at `v0.1.1`; each later release increments the patch version from the latest `vMAJOR.MINOR.PATCH` tag. Version tags also publish releases.
 - The APK's Android `versionName` matches the release version, and `versionCode` is the GitHub Actions run number plus 1000.
 - In the foreground, the app checks GitHub's latest stable release every two minutes. When it finds a newer version, it asks once for that version whether to open the GitHub release page. **Open GitHub** opens the page in the user's browser; **Not now** dismisses the prompt. The **View update** button remains available. The app does not download or install APKs and does not request package-install permission. Android or Play Protect may still show its own security checks.
@@ -124,19 +124,19 @@ For local builds, install Android Studio and the Android SDK, open `mobile` as t
 
 ## Repository workflow
 
-The shared integration branch is `master`. Module branches are `utilisateurs`, `vehicules`, `trajets`, `reservations` and `communication`; Android packaging is maintained on `mobile`. Work on your assigned branch and open a pull request to `master`. Coordinate changes to shared settings, URLs or the `CORIDE` UI.
+The shared integration branch is `master`. Module branches are `m1`, `m2`, `m3`, `m4` and `m5`; Android packaging is maintained on `mobile`. Work on your assigned branch and open a pull request to `master`. Coordinate changes to shared settings, URLs or the `kizuna` UI.
 
 ```powershell
 git status
 git fetch origin
-git switch trajets
+git switch m3
 git pull
 
 uv run manage.py check
-uv run manage.py test trajets
-git add trajets/
+uv run manage.py test m3
+git add m3/
 git commit -m "Describe the change"
 git push
 ```
 
-Replace `trajets` with your module branch. Stage only files related to your change rather than using `git add .`, which can include unrelated work.
+Replace `m3` with your module branch. Stage only files related to your change rather than using `git add .`, which can include unrelated work.

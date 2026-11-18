@@ -10,12 +10,7 @@
 <body class="{% block body_class %}{% endblock %}">
     <header class="site-header">
         <a class="brand" href="{% url 'm1:index' %}">
-            <img
-                class="brand-mark"
-                src="{% static 'm1/zero-itchi-logo.svg' %}"
-                alt="BlackBerry"
-            >
-            <img class="brand-kizuna" src="{% static 'm1/kizuna-logo.svg' %}" alt="Kizuna">
+            <img class="brand-kizuna" src="{% static 'kizuna/logo.svg' %}" alt="Kizuna">
         </a>
         <nav aria-label="Communication">
             <a href="{% url 'm1:conversation_list' %}">Chats</a>

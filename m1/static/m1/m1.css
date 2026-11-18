@@ -142,20 +142,11 @@ select {
     color: var(--ink);
 }
 
-.brand-mark {
+.brand-kizuna {
     display: block;
     flex: none;
     width: 184px;
     height: auto;
-}
-
-.brand-kizuna {
-    display: block;
-    flex: none;
-    width: 144px;
-    height: auto;
-    padding-left: 0.8rem;
-    border-left: 1px solid #c9cfca;
 }
 
 .site-header nav,
@@ -1968,14 +1959,9 @@ p {
         gap: 0.4rem;
     }
 
-    .brand-mark {
-        width: 104px;
-        height: auto;
-    }
-
     .brand-kizuna {
-        width: 106px;
-        padding-left: 0.5rem;
+        width: 120px;
+        height: auto;
     }
 
     .site-header nav {
@@ -2169,14 +2155,9 @@ p {
         gap: 0.25rem;
     }
 
-    .brand-mark {
-        width: 76px;
-        height: auto;
-    }
-
     .brand-kizuna {
-        width: 88px;
-        padding-left: 0.3rem;
+        width: 96px;
+        height: auto;
     }
 
     .site-header nav {

@@ -69,7 +69,7 @@
 <body>
     <main>
         <div class="logo">
-            <img src="{% static 'kizuna/logo.svg' %}" alt="Kizuna">
+            <a href="{% url 'kizuna:index' %}"><img src="{% static 'kizuna/logo.svg' %}" alt="Kizuna"></a>
         </div>
         <h1>{{ title }}</h1>
         <p>{{ hint }}</p>

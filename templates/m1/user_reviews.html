@@ -22,7 +22,7 @@
                 <span class="rating-stars" aria-label="{{ review.rating }} out of 5 stars">★ {{ review.rating }}/5</span>
             </div>
             <p>{{ review.comment|default:"No comment." }}</p>
-            <p class="muted">Trip {{ review.trip_reference }} · {{ review.review_date|date:"M j, Y" }}</p>
+            <p class="muted">Ref {{ review.trip_reference }} · {{ review.review_date|date:"M j, Y" }}</p>
             {% if review.reviewer_participant.user_id == user.id %}
                 <div class="review-actions">
                     <a href="{% url 'm1:review_update' review.id %}">Edit</a>

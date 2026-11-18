@@ -32,7 +32,7 @@
                                 Waiting for someone to join
                             {% endif %}
                         </span>
-                        {% if conversation.trip_reference %} · Trip {{ conversation.trip_reference }}{% endif %}
+                        {% if conversation.trip_reference %} · Ref {{ conversation.trip_reference }}{% endif %}
                     </p>
                     <p class="participant-presence">
                         <span id="participant-presence-dot" class="presence-dot{% if other_online %} presence-online{% endif %}"></span>
@@ -280,7 +280,7 @@
     </form>
     <p id="send-error" class="form-error" aria-live="polite"></p>
     {% if conversation.departure_at %}
-        <p class="chat-footnote">Private trip chat · closes 24 hours after departure.</p>
+        <p class="chat-footnote">Private chat · closes 24 hours after the event.</p>
     {% elif is_group_chat %}
         <p class="chat-footnote">Private group chat · messages are visible to all {{ participant_count }} participants.</p>
     {% else %}

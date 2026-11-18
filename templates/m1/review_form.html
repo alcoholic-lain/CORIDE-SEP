@@ -1,10 +1,10 @@
 {% extends "m1/base.html" %}
 
-{% block title %}{% if editing %}Edit review{% else %}Review trip{% endif %}{% endblock %}
+{% block title %}{% if editing %}Edit review{% else %}Write review{% endif %}{% endblock %}
 
 {% block content %}
 <section class="form-card">
-    <p class="eyebrow">TRIP {{ trip_reference }}</p>
+    <p class="eyebrow">REF {{ trip_reference }}</p>
     <h1>
         {% if editing %}
             Edit your review

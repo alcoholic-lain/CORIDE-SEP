@@ -18,7 +18,7 @@
                 <span class="rating-stars">★ {{ review.rating }}/5</span>
             </div>
             <p>{{ review.comment|default:"No comment." }}</p>
-            <p class="muted">Trip {{ review.trip_reference }} · {{ review.review_date|date:"M j, Y" }}</p>
+            <p class="muted">Ref {{ review.trip_reference }} · {{ review.review_date|date:"M j, Y" }}</p>
             <form method="post" action="{% url 'm1:admin_review_delete' review.id %}">
                 {% csrf_token %}
                 <button class="text-button danger" type="submit">Delete review</button>

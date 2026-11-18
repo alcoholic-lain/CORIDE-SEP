@@ -5,11 +5,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Module{% endblock %} | Kizuna</title>
+    <link rel="icon" type="image/png" href="{% static 'kitty.png' %}">
     <link rel="stylesheet" href="{% static 'm1/m1.css' %}">
 </head>
 <body class="{% block body_class %}{% endblock %}">
     <header class="site-header">
-        <a class="brand" href="{% url 'm1:index' %}">
+        <a class="brand" href="{% url 'kizuna:index' %}">
             <img class="brand-kizuna" src="{% static 'kizuna/logo.svg' %}" alt="Kizuna">
         </a>
         <nav aria-label="Communication">

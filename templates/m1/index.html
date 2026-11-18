@@ -4,9 +4,9 @@
 
 {% block content %}
 <section class="hero">
-    <p class="eyebrow">ZERO-ITCHI · BY KIZUNA</p>
-    <h1>Every ride starts with a conversation.</h1>
-    <p>Start a private chat, share its invite link, and message in real time while you plan your ride.</p>
+    <p class="eyebrow">CHAT · BY KIZUNA</p>
+    <h1>Every conversation starts here.</h1>
+    <p>Start a private chat, share its invite link, and message in real time.</p>
     {% if user.is_authenticated %}
         <a class="button" href="{% url 'm1:conversation_list' %}">Open my chats</a>
     {% elif guest_mode_enabled %}

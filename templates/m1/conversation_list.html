@@ -54,7 +54,7 @@
                         {% empty %}
                             Waiting for someone to join
                         {% endfor %}
-                        {% if conversation.trip_reference %} · Trip {{ conversation.trip_reference }}{% endif %}
+                        {% if conversation.trip_reference %} · Ref {{ conversation.trip_reference }}{% endif %}
                     </p>
                 </div>
                 <span class="status {% if conversation.is_open %}status-open{% else %}status-closed{% endif %}">

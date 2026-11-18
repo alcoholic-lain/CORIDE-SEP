@@ -1,0 +1,165 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} | Kizuna</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'kizuna/icon.svg' %}">
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: system-ui, sans-serif;
+            color: #172f46;
+            background: #f2f7f6;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #dbe3e6;
+            background: #fff;
+        }
+
+        header img {
+            height: 32px;
+            width: auto;
+        }
+
+        header nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem 1rem;
+        }
+
+        header nav a {
+            color: #172f46;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        header nav a:hover {
+            text-decoration: underline;
+        }
+
+        main {
+            flex: 1;
+            display: grid;
+            place-items: center;
+            padding: 2rem 1.5rem;
+        }
+
+        .content {
+            width: min(90vw, 560px);
+            text-align: center;
+        }
+
+        .logo {
+            display: grid;
+            place-items: center;
+            min-height: 140px;
+        }
+
+        .logo img {
+            width: min(320px, 70vw);
+            height: auto;
+        }
+
+        h1 {
+            margin: 1.5rem 0 0.5rem;
+        }
+
+        p {
+            margin: 0;
+            color: #60778a;
+        }
+
+        .modules {
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .modules a {
+            display: block;
+            padding: 0.75rem 0.5rem;
+            border: 1px solid #dbe3e6;
+            border-radius: 10px;
+            background: #fff;
+            color: #172f46;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .modules a:hover {
+            border-color: #172f46;
+        }
+
+        footer {
+            padding: 1.5rem;
+            display: grid;
+            place-items: center;
+            gap: 0.5rem;
+            border-top: 1px solid #dbe3e6;
+        }
+
+        footer img {
+            height: 32px;
+            width: auto;
+            opacity: 0.85;
+        }
+
+        footer span {
+            font-size: 0.75rem;
+            color: #8694a0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="{% url 'kizuna:index' %}">
+            <img src="{% static 'kizuna/logo.svg' %}" alt="Kizuna">
+        </a>
+        <nav aria-label="Modules">
+            {% for module in modules %}
+                <a href="{% url module.url_name %}">{{ module.label }}</a>
+            {% endfor %}
+            <a href="/admin/">Admin</a>
+        </nav>
+    </header>
+    <main>
+        <div class="content">
+            <div class="logo">
+                <img src="{% static 'kizuna/logo.svg' %}" alt="Kizuna">
+            </div>
+            <h1>{{ title }}</h1>
+            <p>{{ hint }}</p>
+            <div class="modules">
+                {% for module in modules %}
+                    <a href="{% url module.url_name %}">{{ module.label }}</a>
+                {% endfor %}
+            </div>
+        </div>
+    </main>
+    <footer>
+        <img src="{% static 'kizuna/partners/esprit-light.png' %}" alt="Esprit">
+        <span>Built at Esprit</span>
+    </footer>
+</body>
+</html>

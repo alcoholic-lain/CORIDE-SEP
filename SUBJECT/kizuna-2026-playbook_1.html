@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KIZUNA 2026 - 25-hour hackathon playbook</title>
+<style>
+:root{--bg:#f4f8fb;--card:#fff;--ink:#14233a;--mut:#5b6b82;--line:#d8e3ee;--acc:#0b7a75;--acc2:#e3f4f2;--warn:#c4571a;--water:#1e88e5;--energy:#f5a623;--agri:#2e9e5b;--hero1:#0a2a4a;--hero2:#0b7a75}
+@media (prefers-color-scheme:dark){:root{--bg:#0c1624;--card:#13233a;--ink:#e6eef8;--mut:#9fb3cc;--line:#25395a;--acc:#4fd1c5;--acc2:#12304a;--warn:#f0a070;--water:#64b5f6;--energy:#ffc857;--agri:#5fd08c;--hero1:#06182d;--hero2:#0b5c5a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 Georgia,"Times New Roman",serif}
+.wrap{max-width:820px;margin:0 auto;padding:24px 18px 80px}
+h1,h2,h3,table,nav,.tag,.bar{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+h1{font-size:2.3rem;line-height:1.15;margin:.2em 0}
+h2{font-size:1.5rem;margin:2.2em 0 .5em;padding-top:.6em;border-top:2px solid var(--acc)}
+h3{font-size:1.1rem;margin:1.6em 0 .4em;color:var(--acc)}
+.tag{color:var(--mut);font-size:.9rem}
+.lead{font-size:1.1rem;border-left:4px solid var(--acc);padding:.2em 1em;background:var(--acc2)}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0}
+nav a{font-size:.82rem;padding:4px 10px;border:1px solid var(--line);border-radius:6px;color:var(--ink);text-decoration:none;background:var(--card)}
+nav a:hover,a:focus-visible{outline:2px solid var(--acc)}
+a{color:var(--acc)}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:1em 0;background:var(--card)}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--acc2)}
+.scroll{overflow-x:auto}
+pre{background:#12201b;color:#d6f1e8;padding:12px;border-radius:6px;overflow-x:auto;font-size:.85rem}
+code{font-family:ui-monospace,Menlo,monospace}
+.note{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--warn);padding:.6em 1em;margin:1em 0}
+.good{border-left-color:var(--acc)}
+.bad{color:var(--warn)}
+.cl{list-style:none;padding:0}
+.cl li{padding:3px 0}
+.cl label{cursor:pointer;display:flex;gap:10px;align-items:flex-start}
+.cl input{margin-top:.45em;accent-color:var(--acc);width:18px;height:18px;flex:none}
+.cl input:checked+span{text-decoration:line-through;color:var(--mut)}
+.bar{position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:5;font-size:.9rem;border-bottom:1px solid var(--line)}
+.bar i{display:block;height:8px;background:var(--line);border-radius:4px;margin-top:4px;overflow:hidden}
+.bar b{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
+.ten{columns:2;column-gap:2em}
+@media(max-width:600px){.ten{columns:1}h1{font-size:1.8rem}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.hero{margin:-24px -18px 22px;padding:34px 22px 0;background:linear-gradient(135deg,var(--hero1),var(--hero2));color:#fff;border-radius:0 0 22px 22px;overflow:hidden}
+.hero h1{color:#fff;max-width:600px}.hero .tag{color:#bfe9e4}
+.hero p.lead{background:rgba(255,255,255,.12);border-left-color:var(--energy);color:#fff;max-width:640px}
+.hero svg{display:block;width:100%;height:auto;margin-top:10px}
+h2{border-top:0;display:flex;align-items:center;gap:12px;padding:10px 14px;background:linear-gradient(90deg,var(--acc2),transparent);border-left:5px solid var(--acc);border-radius:6px}
+h2:nth-of-type(3n+1){border-left-color:var(--water)}h2:nth-of-type(3n+2){border-left-color:var(--energy)}h2:nth-of-type(3n){border-left-color:var(--agri)}
+th{background:linear-gradient(90deg,var(--water),var(--acc));color:#fff}
+.tracks{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:1em 0;font-family:system-ui,sans-serif}
+.tr{background:var(--card);border:1px solid var(--line);border-top:5px solid var(--c);border-radius:12px;padding:14px;font-size:.9rem}
+.tr svg{width:56px;height:56px}.tr b{display:block;font-size:1.1rem;color:var(--c)}
+.tl{width:100%;height:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;margin:1em 0}
+.tl text{font:12px system-ui,sans-serif;fill:var(--ink)}
+.cl input{accent-color:var(--agri)}
+.bar b{background:linear-gradient(90deg,var(--water),var(--agri),var(--energy))}
+.note{border-radius:8px}
+.foot{margin:30px -18px -80px;display:block;width:calc(100% + 36px)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="hero">
+<p class="tag">Competition preparation - 25-hour sprint - 21-22 November 2026</p>
+<h1>KIZUNA 2026: the 25-hour hackathon winning playbook</h1>
+<p class="lead">Approach this as a competition, not a university assignment. 25 hours, a team of four, ESPRIT, themes <b>Water, Energy and Agriculture</b>. 10 finalist places; the goal is to make the shortlist and win.</p>
+<svg viewBox="0 0 800 220" role="img" aria-label="Sun over solar panels, wind turbine, water waves and crop rows">
+<defs><linearGradient id="sun" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd86b"/><stop offset="1" stop-color="#f5a623"/></linearGradient></defs>
+<circle cx="640" cy="70" r="38" fill="url(#sun)"/>
+<g stroke="#ffd86b" stroke-width="3" stroke-linecap="round"><path d="M640 14v14M640 112v14M584 70h14M682 70h14M600 30l10 10M670 100l10 10M680 30l-10 10M610 100l-10 10"/></g>
+<g transform="translate(120,40)" stroke="#fff" stroke-width="4" stroke-linecap="round"><path d="M0 150V40" stroke-width="6"/><circle cx="0" cy="40" r="6" fill="#fff"/><path d="M0 40L0 -8M0 40L40 62M0 40L-40 62"/></g>
+<g transform="translate(300,120)"><path d="M0 40l30-40h90l-30 40z" fill="#1e88e5" stroke="#fff" stroke-width="2"/><path d="M40 0l-12 40M70 0l-12 40M100 0l-12 40M8 20h104" stroke="#fff" stroke-width="1.5"/><path d="M60 40v30" stroke="#fff" stroke-width="3"/></g>
+<path d="M0 150c60-18 100 18 160 0s100-18 160 0 100 18 160 0 100-18 160 0 100 18 160 0V220H0z" fill="#1e88e5" opacity=".55"/>
+<path d="M0 175c60-14 100 14 160 0s100-14 160 0 100 14 160 0 100-14 160 0 100 14 160 0V220H0z" fill="#64b5f6" opacity=".6"/>
+<g fill="#2e9e5b"><path d="M520 220l40-48 80 0 40 48z"/></g>
+<g stroke="#9be7b4" stroke-width="3" stroke-linecap="round"><path d="M560 220l14-46M590 220l8-46M620 220l0-46M650 220l-8-46M680 220l-14-46"/></g>
+<g fill="#9be7b4"><ellipse cx="574" cy="170" rx="6" ry="11"/><ellipse cx="620" cy="170" rx="6" ry="11"/><ellipse cx="666" cy="170" rx="6" ry="11"/></g>
+</svg>
+</div>
+<p><b>The team that writes the most code does not necessarily win.</b> The team that identifies the right problem, builds the clearest working solution, proves its value and communicates it convincingly has a much better chance. Aim for the most convincing <i>complete product</i>, not the biggest project.</p>
+
+<div class="scroll"><table>
+<tr><th>Milestone</th><th>Time</th></tr>
+<tr><td>Forum begins</td><td>08:30, Saturday</td></tr>
+<tr><td>Competition begins</td><td>11:00, Saturday</td></tr>
+<tr><td>First checkpoint</td><td>21:00, Saturday</td></tr>
+<tr><td>Second checkpoint</td><td>09:30, Sunday</td></tr>
+<tr><td>Final submission</td><td>12:00, Sunday</td></tr>
+<tr><td>Finalists announced</td><td>14:30, Sunday</td></tr>
+<tr><td>Pitches</td><td>15:00, Sunday</td></tr>
+</table></div>
+<p class="tag">The exact judging rubric and pitch duration are not confirmed. Verify them with the organizers.</p>
+
+<nav>
+<a href="#s1">1 Research</a><a href="#s2">2 KIZUNA</a><a href="#s3">3 Team</a><a href="#s4">4 Plan</a><a href="#s5">5 Impress</a><a href="#s6">6 AI tricks</a><a href="#s7">7 Pitch</a><a href="#s8">8 Checklists</a><a href="#s9">9 Mistakes</a><a href="#s10">10 Questions</a><a href="#s11">11 Positioning</a><a href="#s12">12 Cheat sheet</a>
+</nav>
+
+<h2 id="s1">1. What the research says about winning</h2>
+<p>Sources: organizer guidance, judging rubrics, university guides, pitch resources and participant accounts, including <a href="https://www.youtube.com/watch?v=YwANe-1W8iU">How I Won 11 Hackathons</a>, the <a href="https://github.com/MLH/mlh-policies/blob/main/standard-hackathon-rules.md">MLH judging rules</a>, <a href="https://guide.hackutd.co/Workshops/Pitching">HackUTD's pitching guide</a> and Harvard's <a href="https://hsph.harvard.edu/wp-content/uploads/2026/11/HSIL_Hackathon_Participant_Guide_2027.pdf">Hackathon Participant Guide</a>. MLH criteria are not KIZUNA's confirmed criteria, but several principles recur.</p>
+<h3>Seven principles</h3>
+<ol>
+<li><b>Solve a specific problem, not an entire industry.</b> One identifiable problem for one identifiable user, not "revolutionizing Tunisian agriculture".</li>
+<li><b>A complete MVP beats an ambitious unfinished platform.</b> One working end-to-end journey beats 15 disconnected features.</li>
+<li><b>Integrate early.</b> Don't build four separate projects until the last three hours.</li>
+<li><b>Demonstrate measurable value.</b> Show how much water you could save under a clearly stated scenario, with a transparent calculation.</li>
+<li><b>Make the demo the star.</b> Judges should see the product working, not hear an architecture lecture.</li>
+<li><b>Use mentors strategically.</b> Validate your problem, assumptions and approach early.</li>
+<li><b>Protect the final hours.</b> Stop adding features, then test, fix, rehearse and prepare a backup demo.</li>
+</ol>
+<p>MLH's framework weighs technology, design, completion and learning equally and encourages showing what was actually built. Don't sacrifice functionality for presentation theatre.</p>
+
+<h2 id="s2">2. Understand what KIZUNA is looking for</h2>
+<p>The official description emphasizes concrete solutions with measurable impact, supported by technical mentors and JICA experts.</p>
+<div class="tracks">
+<div class="tr" style="--c:var(--water)"><svg viewBox="0 0 56 56"><path d="M28 5C20 18 12 26 12 36a16 16 0 0032 0C44 26 36 18 28 5z" fill="var(--water)"/><path d="M20 38a8 8 0 006 7" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></svg><b>Water</b>Water losses, irrigation optimization, reuse, intelligent management</div>
+<div class="tr" style="--c:var(--energy)"><svg viewBox="0 0 56 56"><path d="M32 4L12 32h14l-4 20 22-30H30z" fill="var(--energy)"/></svg><b>Energy</b>Consumption optimization, renewable energy, energy efficiency</div>
+<div class="tr" style="--c:var(--agri)"><svg viewBox="0 0 56 56"><path d="M28 52V24" stroke="var(--agri)" stroke-width="4" stroke-linecap="round"/><path d="M28 30C14 30 8 20 8 10c12 0 20 6 20 20zM28 24c0-12 8-18 20-18 0 10-6 18-20 18z" fill="var(--agri)"/></svg><b>Agriculture</b>Smart farming, resource allocation, IoT and AI</div>
+</div>
+<p><b>Recommendation:</b> don't automatically choose the AI-heavy idea. Choose the one linking a real problem, an achievable technical solution and measurable impact. Wait for the actual challenge statement. Possible directions:</p>
+<ul>
+<li>A simple predictive irrigation tool with a working recommendation engine may beat an elaborate AI agricultural platform.</li>
+<li>An energy dashboard that finds waste and suggests specific interventions may beat a chatbot.</li>
+<li>A water-loss detector with a transparent anomaly pipeline may beat a generic water app.</li>
+</ul>
+<h3>First mission: understand the problem better than other teams</h3>
+<p>Don't start coding. Spend the first 30-45 minutes establishing:</p>
+<ol>
+<li>Who experiences the problem?</li><li>What exactly happens?</li><li>Why does it happen?</li><li>How is it handled now?</li><li>Why is the current solution insufficient?</li><li>What data is available?</li><li>What can we realistically demo in 25 hours?</li><li>What measurable outcome would prove it works?</li>
+</ol>
+<p>Talk to the mentors, especially domain experts. Ask which real-world constraints teams usually underestimate.</p>
+
+<h2 id="s3">3. Team strategy</h2>
+<div class="scroll"><table>
+<tr><th>Role</th><th>Ownership</th></tr>
+<tr><td><b>You: AI / Product / Integration / Pitch</b></td><td>Understand the challenge and define the MVP. Pick the AI/ML approach only if needed. Own the data and inference pipeline, make sure AI output reaches the app, own the narrative and validate impact claims.</td></tr>
+<tr><td><b>Backend / Systems</b></td><td>API, database and data models, business logic, integration with frontend and AI, endpoint testing.</td></tr>
+<tr><td><b>Infrastructure / Implementation</b></td><td>Dev environment, Git, deployment, Linux services, hardware/IoT if needed, debugging and reliability.</td></tr>
+<tr><td><b>Frontend / UX / Validation</b></td><td>UI, dashboard and charts, user journey, demo preparation, realistic scenario testing, research and docs.</td></tr>
+</table></div>
+<p>These are ownership areas, not rigid jobs. Adapt them to real strengths on Saturday morning.</p>
+<h3>Golden rule: one owner per component</h3>
+<div class="scroll"><table>
+<tr><th>Component</th><th>Owner</th><th>Deliverable</th></tr>
+<tr><td>ML pipeline</td><td>You</td><td>Working predictions</td></tr>
+<tr><td>API</td><td>Backend</td><td>Working endpoints</td></tr>
+<tr><td>Deployment</td><td>Infrastructure</td><td>Accessible application</td></tr>
+<tr><td>Frontend</td><td>UX</td><td>Complete user flow</td></tr>
+<tr><td>Product narrative</td><td>You</td><td>Problem, solution, impact</td></tr>
+<tr><td>Final integration</td><td>All</td><td>Working end-to-end product</td></tr>
+</table></div>
+<h3>Recommended architecture</h3>
+<p><b>Frontend</b> (React: input, dashboard, charts, results) &rarr; <b>Backend</b> (FastAPI: API, validation, business logic) &rarr; <b>AI/ML</b> (Python: model, inference) &rarr; <b>Database</b> (storage, history). Add sensor/IoT integration only if the challenge needs it. Each person works independently while interfaces stay stable.</p>
+<h3>Establish the API contract immediately</h3>
+<pre><code>{ "input": { "soil_moisture": 28, "temperature": 32, "humidity": 45 } }
+
+{ "prediction": "irrigation_required", "confidence": 0.91,
+  "recommended_action": "Irrigate now" }</code></pre>
+<p class="tag">Illustrative values and a sample contract, not real model outputs.</p>
+<p>This prevents the classic disaster: frontend expects one JSON shape, backend returns another, AI uses a third.</p>
+<h3>Git rules</h3>
+<ul>
+<li>One shared repository; one <code>main</code> branch that always runs.</li>
+<li>Feature branches: <code>frontend/dashboard</code>, <code>backend/api</code>, <code>ai/model</code>, <code>infra/deployment</code>.</li>
+<li>Small, frequent commits; reviews before merging; never overwrite others' work.</li>
+<li>Keep a working previous version before major changes.</li>
+</ul>
+<div class="note good"><b>Rule:</b> nobody merges a change into the working application without testing the affected user flow.</div>
+
+<h2 id="s4">4. The 25-hour execution plan</h2>
+<p>Saturday 11:00 to Sunday 12:00, in phases, so you never discover at the end that you have no working product.</p>
+<svg class="tl" viewBox="0 0 720 190" role="img" aria-label="25-hour timeline from Saturday 11:00 to Sunday 12:00"><rect x="30" y="70" width="79" height="26" fill="var(--water)"/><text x="69.5" y="87" text-anchor="middle" style="fill:#fff;font-size:11px">Setup</text><rect x="109" y="70" width="185" height="26" fill="var(--agri)"/><text x="201.5" y="87" text-anchor="middle" style="fill:#fff;font-size:11px">Build</text><rect x="294" y="70" width="106" height="26" fill="var(--energy)"/><text x="347.0" y="87" text-anchor="middle" style="fill:#fff;font-size:11px">Improve</text><rect x="400" y="70" width="158" height="26" fill="#7b8aa3"/><text x="479.0" y="87" text-anchor="middle" style="fill:#fff;font-size:11px">Stabilize, rest</text><rect x="558" y="70" width="66" height="26" fill="var(--warn)"/><text x="591.0" y="87" text-anchor="middle" style="fill:#fff;font-size:11px">Freeze</text><rect x="624" y="70" width="66" height="26" fill="var(--acc)"/><text x="657.0" y="87" text-anchor="middle" style="fill:#fff;font-size:11px">Submit</text><path d="M30 96V60" stroke="var(--ink)" stroke-width="2"/><circle cx="30" cy="60" r="5" fill="var(--ink)"/><text x="30" y="46" text-anchor="start">Sat 11:00 start</text><path d="M294 96V60" stroke="var(--ink)" stroke-width="2"/><circle cx="294" cy="60" r="5" fill="var(--ink)"/><text x="294" y="46" text-anchor="middle">Sat 21:00 prototype</text><path d="M558 96V60" stroke="var(--ink)" stroke-width="2"/><circle cx="558" cy="60" r="5" fill="var(--ink)"/><text x="558" y="46" text-anchor="middle">Sun 07:00 freeze</text><path d="M624 96V114" stroke="var(--ink)" stroke-width="1.5"/><circle cx="624" cy="96" r="4" fill="var(--ink)"/><text x="618" y="126" text-anchor="end">09:30 verify</text><path d="M664 96V134" stroke="var(--ink)" stroke-width="1.5"/><circle cx="664" cy="96" r="4" fill="var(--ink)"/><text x="658" y="146" text-anchor="end">11:00 submit</text><path d="M690 96V154" stroke="var(--ink)" stroke-width="1.5"/><circle cx="690" cy="96" r="4" fill="var(--ink)"/><text x="684" y="166" text-anchor="end">12:00 deadline</text></svg>
+<div class="scroll"><table>
+<tr><th>When</th><th>Phase</th><th>Do</th></tr>
+<tr><td>Sat 08:30-11:00</td><td>Forum and reconnaissance</td><td>Meet mentors and organizers, ask about submission and judging, confirm rules on external APIs, pretrained models and templates, find datasets and experts, check all four laptops.</td></tr>
+<tr><td>11:00-12:00</td><td>Challenge analysis</td><td>Read the statement, identify user and pain point, research existing solutions, ask mentors, choose one direction, write the one-sentence value proposition, define the MVP and acceptance criteria. Don't let brainstorming eat the afternoon.</td></tr>
+<tr><td>12:00-14:00</td><td>Architecture and foundation</td><td>Repo, responsibilities, API contract, app skeleton, data sources, environment. First end-to-end connection, even with sample data.</td></tr>
+<tr><td>14:00-18:00</td><td>Main development</td><td>Frontend: main journey. Backend: API and logic. AI: pipeline, model, inference. Infra: integration, deployment, reliability. Integrate every 60-90 minutes.</td></tr>
+<tr><td>18:00-21:00</td><td>First complete prototype</td><td>Connect everything, run the full journey, fix integration problems, collect screenshots, prepare the first demo. <b>21:00 checkpoint:</b> show something concrete.</td></tr>
+<tr><td>21:00-01:00</td><td>Improve and differentiate</td><td>Better model or logic, better UI, one or two genuinely valuable features, edge cases, validate impact calculations, docs. No features just because someone has an idea.</td></tr>
+<tr><td>01:00-07:00</td><td>Stabilization and rest rotations</td><td>Finish essential integrations, fix critical bugs, make sure deployment survives, rest in staggered shifts with one person always on technical coverage, keep a written handover. Don't have four exhausted people debugging the same problem at 4 a.m.</td></tr>
+<tr><td>07:00-09:30</td><td>Feature freeze and verification</td><td>No new features. Test everything, verify deployment and data, prepare demo data and pitch, record a backup demo, verify submission requirements. <b>09:30 checkpoint.</b></td></tr>
+<tr><td>09:30-12:00</td><td>Submission</td><td>Critical fixes only, final rehearsal, README, final push, submission form, verify it went through. Aim to submit by <b>11:00</b>, not 11:59.</td></tr>
+</table></div>
+<h3>Internal deadlines (non-negotiable)</h3>
+<div class="scroll"><table>
+<tr><th>Deadline</th><th>What must exist</th></tr>
+<tr><td>Saturday 14:00</td><td>Architecture, repository, running skeleton</td></tr>
+<tr><td>Saturday 21:00</td><td>Complete basic user journey</td></tr>
+<tr><td>Sunday 07:00</td><td>Feature-complete MVP</td></tr>
+<tr><td>Sunday 09:30</td><td>Stable, tested product</td></tr>
+<tr><td>Sunday 11:00</td><td>Submission ready, preferably submitted</td></tr>
+<tr><td>Sunday 12:00</td><td>Absolute deadline</td></tr>
+</table></div>
+<h3>Team sync (every 60-90 minutes)</h3>
+<p>Each person answers: what I completed, what I'm doing next, what blocks me, what I need from someone. Keep a board with To do / In progress / Done; each task has one owner, one result, one deadline. Blocked for more than 15 minutes? Ask for help.</p>
+
+<h2 id="s5">5. Building a project that impresses judges</h2>
+<h3>A. Problem understanding</h3>
+<p class="bad">Weak: "We want to use AI to optimize water consumption."</p>
+<p><b>Strong:</b> "Small agricultural operators often decide on irrigation without enough information about soil conditions, which wastes water. Our solution uses available environmental data to recommend when and how much to irrigate." It says who, what and why.</p>
+<h3>B. Technical substance</h3>
+<div class="scroll"><table>
+<tr><th>Technique</th><th>Possible application</th></tr>
+<tr><td>Regression</td><td>Predicting water or energy consumption</td></tr>
+<tr><td>Classification</td><td>Identifying risk or abnormal conditions</td></tr>
+<tr><td>Clustering</td><td>Discovering consumption or usage patterns</td></tr>
+<tr><td>Anomaly detection</td><td>Detecting unusual water or electricity usage</td></tr>
+<tr><td>Time-series forecasting</td><td>Predicting future demand</td></tr>
+<tr><td>Optimization</td><td>Efficient resource allocation</td></tr>
+<tr><td>Computer vision</td><td>Crop conditions from images</td></tr>
+</table></div>
+<p>Don't use all of them. If you can explain why your model fits, what it takes in, what it predicts and how the output changes a real decision, that beats "we used machine learning".</p>
+<h3>C. Measurable impact</h3>
+<p>Prepare at least one indicator: liters saved per irrigation cycle, % energy reduction in a defined scenario, anomalies correctly detected on a test set, forecast error versus a simple baseline, or time saved versus the current workflow. Separate measured from projected results.</p>
+<div class="note good">Acceptable: "Under our simulated 100-hectare scenario, our engine estimates a potential 12% reduction in water use", with transparent assumptions.</div>
+<div class="note">Not acceptable: claiming 12% real-world savings when you only ran a simulation.</div>
+<h3>D. User experience</h3>
+<p>Judges should understand the app without explanations. Have one clear primary action, an understandable result, a meaningful visualization, a recommendation and a clear next step. Avoid extra menus, decorative graphs and walls of text.</p>
+<h3>E. Differentiation</h3>
+<p>Ask: why would someone use this instead of the existing method? Possible answers: more accessible, better local adaptation, lower infrastructure needs, predictive rather than reactive, combines normally separate data sources, a particularly useful workflow. A complicated architecture is not a unique value proposition.</p>
+
+<h2 id="s6">6. AI and technical tricks</h2>
+<ol>
+<li><b>Always establish a baseline.</b> Regression: predict the mean or previous observation. Classification: majority class.</li>
+<li><b>Don't waste hours training unnecessarily.</b> Look for existing datasets and pretrained models; start simple.</li>
+<li><b>Build the fallback before the fancy feature.</b> One failed inference must never crash the demo.</li>
+<li><b>Use explainable outputs.</b> Not just "Risk score: 0.89": say what it represents, which inputs contributed, the recommended action, and confidence if calibrated.</li>
+<li><b>Keep the pipeline reproducible.</b> Save preprocessing, model config and sample inputs.</li>
+<li><b>Avoid AI for AI's sake.</b> If rules fit better, use rules. Judges may ask why ML is needed.</li>
+<li><b>Don't overengineer.</b> No Kubernetes, microservices or five agents for a 25-hour project.</li>
+</ol>
+
+<h2 id="s7">7. The pitch</h2>
+<p>Pitch duration is not confirmed. Ask the organizers, prepare a three-minute version, then adapt.</p>
+<div class="scroll"><table>
+<tr><th>Time</th><th>Part</th><th>Content</th></tr>
+<tr><td>0:00-0:20</td><td>Hook</td><td>Make the problem immediately understandable.</td></tr>
+<tr><td>0:20-0:50</td><td>Problem</td><td>Who, why it matters, evidence.</td></tr>
+<tr><td>0:50-1:20</td><td>Solution</td><td>Your product and its unique value.</td></tr>
+<tr><td>1:20-2:20</td><td>Live demo</td><td>One complete user journey and the actual result.</td></tr>
+<tr><td>2:20-2:45</td><td>Innovation and impact</td><td>The key technical decision and measurable benefit.</td></tr>
+<tr><td>2:45-3:00</td><td>Closing</td><td>One memorable statement.</td></tr>
+</table></div>
+<h3>How to start</h3>
+<p>Never open with "Hello everyone, we are team X and today we present...". Open with a scenario, for example: "Imagine a farmer who must decide every morning whether to irrigate, without knowing how much water the soil needs. Every wrong decision costs water, money and productivity. We built a way to make that decision smarter."</p>
+<h3>The live demo</h3>
+<p>Show: the user opens the app, enters or selects information, the system processes it, the AI produces a result, the user gets a recommendation, and the measurable benefit appears. One complete scenario. Don't tour every page, don't show source code for 90 seconds, and don't explain architecture before anyone has seen the product.</p>
+<h3>How to close</h3>
+<p>Not "That's it, thank you." Connect technology to impact: "We didn't build another dashboard. We built a decision-support tool that turns available data into actionable resource-saving decisions." Only claim what the prototype supports.</p>
+<h3>Delivery tips</h3>
+<ul>
+<li>Speak slower than you think you need to; look at the judges, not the screen.</li>
+<li>Don't read slides; keep them clean.</li>
+<li>One main presenter; the technical owner is ready for detailed questions.</li>
+<li>Never interrupt a teammate. If you don't know, say so and explain how you'd verify.</li>
+</ul>
+<h3>Questions to rehearse</h3>
+<div class="scroll"><table>
+<tr><th>Judge's question</th><th>What they want to know</th></tr>
+<tr><td>Why did you choose this problem?</td><td>Problem understanding</td></tr>
+<tr><td>Why is your solution different?</td><td>Innovation</td></tr>
+<tr><td>Why did you use AI?</td><td>Technical reasoning</td></tr>
+<tr><td>What data did you use?</td><td>Credibility</td></tr>
+<tr><td>How accurate is your model?</td><td>Validation</td></tr>
+<tr><td>Can it work in real conditions?</td><td>Feasibility</td></tr>
+<tr><td>How much does implementation cost?</td><td>Practicality</td></tr>
+<tr><td>Who would actually use it?</td><td>Adoption</td></tr>
+<tr><td>What happens if the model fails?</td><td>Reliability</td></tr>
+<tr><td>What would you build next?</td><td>Vision</td></tr>
+</table></div>
+
+<h2 id="s8">8. Checklists</h2>
+<p>Tick items as you go. Progress is saved in this browser where storage is available.</p>
+<div class="bar" id="bar">Overall progress: <span id="pct">0%</span> (<span id="cnt">0</span>/<span id="tot">0</span>)<i><b id="fill"></b></i></div>
+
+<h3>A. Tonight, before sleep</h3>
+<ul class="cl" data-g="a">
+<li>Confirm all four teammates know the meeting time and place.</li>
+<li>Charge every laptop, phone and power bank.</li>
+<li>Check laptop chargers and extension cables.</li>
+<li>Check Git works and everyone can access the repository.</li>
+<li>Check Python, Node.js, IDEs and dependencies.</li>
+<li>Check GitHub authentication and SSH keys.</li>
+<li>Check each teammate can run their dev environment.</li>
+<li>Prepare a shared communication channel and a shared notes document.</li>
+<li>Set alarms and arrange transportation.</li>
+<li>Pack your bag and prepare clothes.</li>
+<li>Sleep instead of researching random technologies.</li>
+</ul>
+
+<h3>B. Saturday morning, before leaving</h3>
+<ul class="cl" data-g="b">
+<li>Phone and laptop fully charged; both chargers packed.</li>
+<li>Power bank, earphones, mouse packed.</li>
+<li>Power strip or extension cable, if available.</li>
+<li>Water bottle and enough quick-to-eat food and snacks.</li>
+<li>Wallet, cash, identification, student card and registration confirmation.</li>
+<li>Notebook and pens; hygiene essentials; any personal medication.</li>
+<li>Comfortable clothes and shoes.</li>
+<li>Transportation and arrival time confirmed.</li>
+<li>Team channel working; alarm and backup alarm set.</li>
+</ul>
+<ul>
+<li>Four developers need outlets, so bring a power strip.</li>
+<li>Don't rely on buying water at 3 a.m.</li>
+<li>Don't arrive at 10:55. The forum starts at 08:30, so use it.</li>
+</ul>
+
+<h3>C. Project readiness: the definition of done</h3>
+<p>A working core journey, valid submission and reproducible demo matter more than perfect docs or sophisticated deployment.</p>
+<p><b>Problem and product</b></p>
+<ul class="cl" data-g="c">
+<li>The challenge statement is clearly understood.</li>
+<li>The target user is identified.</li>
+<li>The problem is specific and backed by evidence.</li>
+<li>The solution addresses the assigned challenge.</li>
+<li>The value proposition fits in one sentence.</li>
+<li>The MVP scope is defined.</li>
+<li>The main user journey is complete.</li>
+</ul>
+<p><b>Technical implementation</b></p>
+<ul class="cl" data-g="c">
+<li>Frontend, backend and AI/ML components run.</li>
+<li>API integration works.</li>
+<li>Database reads and writes work, if applicable.</li>
+<li>Input validation exists and errors are handled gracefully.</li>
+<li>The main feature works with realistic data.</li>
+<li>Results are reproducible where expected.</li>
+<li>No critical integration errors remain.</li>
+</ul>
+<p><b>AI and data</b></p>
+<ul class="cl" data-g="c">
+<li>Data sources are identified and licensing checked.</li>
+<li>Preprocessing is reproducible.</li>
+<li>The model or algorithm has a justified purpose and a baseline.</li>
+<li>Evaluation is documented and accuracy claims are backed by tests.</li>
+<li>Simulated and real data are clearly distinguished.</li>
+<li>AI output leads to a useful action.</li>
+</ul>
+<p><b>Impact and innovation</b></p>
+<ul class="cl" data-g="c">
+<li>A clear differentiator exists.</li>
+<li>Expected impact is explained with at least one measurable indicator.</li>
+<li>Impact calculations have documented assumptions.</li>
+<li>Limitations are acknowledged.</li>
+<li>The solution is realistic beyond the hackathon.</li>
+</ul>
+<p><b>Demo and deployment</b></p>
+<ul class="cl" data-g="c">
+<li>The app launches from a clean environment.</li>
+<li>The deployed app is accessible, if required.</li>
+<li>The main demo scenario works start to finish, with demo data ready.</li>
+<li>The UI is readable and consistent, with no broken buttons or dead links.</li>
+<li>A backup demo recording and screenshots exist.</li>
+<li>The demo was rehearsed on the actual presentation setup, if possible.</li>
+</ul>
+<p><b>Submission and documentation</b></p>
+<ul class="cl" data-g="c">
+<li>GitHub repository is accessible and all essential code is pushed.</li>
+<li>README explains the project and how to run it.</li>
+<li>Architecture and dependencies are documented.</li>
+<li>External resources and AI tools are acknowledged as required.</li>
+<li>Submission form and presentation materials are complete.</li>
+<li>Submission receipt or confirmation is saved.</li>
+</ul>
+
+<h2 id="s9">9. Mistakes that can destroy your chances</h2>
+<div class="scroll"><table>
+<tr><th>Mistake</th><th>Instead</th></tr>
+<tr><td>Three hours debating ideas</td><td>Set a decision deadline</td></tr>
+<tr><td>Unnecessarily broad problem</td><td>One user, one workflow</td></tr>
+<tr><td>Everyone coding independently</td><td>Agree on interfaces first</td></tr>
+<tr><td>Integrating at the end</td><td>Integrate continuously</td></tr>
+<tr><td>Impressive but broken UI</td><td>Test the full journey early</td></tr>
+<tr><td>Model without a baseline</td><td>Evaluate against a simple alternative</td></tr>
+<tr><td>Adding features at 10 a.m.</td><td>Feature freeze at 07:00</td></tr>
+<tr><td>Fabricated statistics</td><td>Cite real data or label simulations</td></tr>
+<tr><td>Depending on internet access</td><td>Local data and offline fallbacks</td></tr>
+<tr><td>Relying on an unstable live API</td><td>Cache sample responses where permitted</td></tr>
+<tr><td>Only one person understands the app</td><td>Everyone knows the basic architecture</td></tr>
+<tr><td>No backup presentation</td><td>Record a working demo</td></tr>
+<tr><td>Submitting at 11:59</td><td>Target 11:00</td></tr>
+</table></div>
+<h3>If the app breaks during the pitch</h3>
+<ol>
+<li><b>Live application:</b> show the real app and a complete journey.</li>
+<li><b>Local application:</b> if deployment fails, run the working version locally.</li>
+<li><b>Recorded demo:</b> if all else fails, play the recording and explain honestly.</li>
+</ol>
+<p>Never pretend a recording is live. Ask the organizers whether recorded demos are allowed; some competitions require a live demo.</p>
+
+<h2 id="s10">10. Questions for organizers and mentors</h2>
+<h3>Organizers, at the forum</h3>
+<ol>
+<li>What are the judging criteria and weights?</li><li>Is there a maximum pitch duration?</li><li>Is there a separate Q&amp;A?</li><li>What are the mandatory deliverables?</li><li>Is a GitHub repository required?</li><li>Are external APIs and pretrained models permitted?</li><li>Are templates and boilerplate permitted?</li><li>Any restrictions on generative AI?</li><li>Is a live demo mandatory?</li><li>What happens if internet or deployment fails?</li>
+</ol>
+<h3>Technical mentors</h3>
+<ul>
+<li>What are the most common technical mistakes in this domain?</li>
+<li>Which datasets or sources do you recommend?</li>
+<li>What would make this realistic in Tunisia?</li>
+<li>What would prevent adoption?</li>
+<li>Which metric best demonstrates effectiveness?</li>
+</ul>
+<h3>Domain experts</h3>
+<ul>
+<li>How is this problem solved today, and what is the biggest limitation?</li>
+<li>Who makes the relevant decisions?</li>
+<li>What would make this genuinely useful?</li>
+</ul>
+<div class="note good"><b>Best question:</b> "If you were evaluating our solution, what would make you doubt that it could work in the real world?"</div>
+
+<h2 id="s11">11. Your competitive advantage</h2>
+<p>Don't be the team with the most technologies. Be the team with the best mix of <b>technical depth</b> (justified AI/ML, good engineering, working implementation), <b>problem relevance</b>, <b>measurable impact</b> and <b>communication</b>.</p>
+<ol>
+<li>A real problem with a clear user.</li>
+<li>One complete working product journey.</li>
+<li>A technically defensible solution.</li>
+<li>A measurable impact demonstration.</li>
+<li>An excellent user interface.</li>
+<li>A polished presentation.</li>
+<li>Extra features only if everything above is secure.</li>
+</ol>
+<p>Judges have limited time and may see many projects. Make it extremely easy to see why yours matters.</p>
+
+<h2 id="s12">12. Final cheat sheet</h2>
+<p><b>KIZUNA 2026. 25 hours. Four people. One problem. One working solution.</b></p>
+<ol class="ten">
+<li>Understand before coding.</li><li>Choose a narrow problem.</li><li>Define the MVP.</li><li>Assign clear responsibilities.</li><li>Integrate early.</li><li>Test continuously.</li><li>Measure your impact.</li><li>Freeze features at 07:00 Sunday.</li><li>Rehearse the demo.</li><li>Submit before the deadline.</li>
+</ol>
+<div class="scroll"><table>
+<tr><th>Sat 11:00</th><th>Sat 21:00</th><th>Sun 07:00</th><th>Sun 09:30</th><th>Sun 11:00</th><th>Sun 12:00</th></tr>
+<tr><td>Start</td><td>First working prototype</td><td>Feature freeze</td><td>Final verification</td><td>Target submission</td><td>Absolute deadline</td></tr>
+</table></div>
+
+<h3>Research references</h3>
+<ul>
+<li><a href="https://tunisopen.kendo.tn/">Official KIZUNA event information</a> (<a href="https://tunisopen.kendo.tn/fr/">French</a>)</li>
+<li><a href="https://github.com/MLH/mlh-policies/blob/main/standard-hackathon-rules.md">MLH judging rules</a></li>
+<li><a href="https://guide.hackutd.co/Workshops/Pitching">HackUTD pitching guide</a></li>
+<li><a href="https://hsph.harvard.edu/wp-content/uploads/2026/11/HSIL_Hackathon_Participant_Guide_2027.pdf">Harvard hackathon participant guide</a></li>
+<li><a href="https://hack4hack.com/guides/how-to-win-a-hackathon">25 hackathon winning tips</a></li>
+<li><a href="https://www.youtube.com/watch?v=YwANe-1W8iU">How I Won 11 Hackathons</a></li>
+</ul>
+
+<div class="note good"><b>Tonight, don't try to become a better programmer in six hours. Become a better-prepared teammate.</b> Tomorrow: listen carefully, recognize the opportunity, decide quickly, execute. Send the actual challenge statement as soon as it's announced at 11:00 so you can work through problem selection, MVP scope, architecture, AI approach and pitch. <b>Go for the top three. Build something that deserves to be there.</b></div>
+<svg class="foot" viewBox="0 0 800 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 30c80-30 160 30 240 0s160-30 240 0 160 30 240 0 60-10 80-5V60H0z" fill="var(--water)" opacity=".5"/><path d="M0 42c80-24 160 24 240 0s160-24 240 0 160 24 240 0 60-8 80-4V60H0z" fill="var(--agri)" opacity=".6"/></svg>
+</div>
+
+<script>
+(function(){
+var boxes=[],KEY="kizuna-playbook-v1",saved={};
+try{saved=JSON.parse(localStorage.getItem(KEY)||"{}")}catch(e){}
+document.querySelectorAll(".cl").forEach(function(ul){
+ ul.querySelectorAll("li").forEach(function(li,i){
+  var id=ul.dataset.g+":"+li.textContent.slice(0,40);
+  var t=li.innerHTML;
+  li.innerHTML='<label><input type="checkbox"><span>'+t+'</span></label>';
+  var cb=li.querySelector("input");cb.dataset.id=id;cb.checked=!!saved[id];
+  cb.addEventListener("change",update);boxes.push(cb);
+ });
+});
+function update(){
+ var n=0,s={};
+ boxes.forEach(function(b){if(b.checked){n++;s[b.dataset.id]=1}});
+ try{localStorage.setItem(KEY,JSON.stringify(s))}catch(e){}
+ var p=boxes.length?Math.round(n/boxes.length*100):0;
+ document.getElementById("pct").textContent=p+"%";
+ document.getElementById("cnt").textContent=n;
+ document.getElementById("tot").textContent=boxes.length;
+ document.getElementById("fill").style.width=p+"%";
+}
+update();
+})();
+</script>
+</body>
+</html>

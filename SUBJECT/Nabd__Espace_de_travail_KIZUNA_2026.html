@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nabd – Espace de travail KIZUNA 2026</title>
+<style>
+:root{--bg:#f4f6f3;--card:#fff;--ink:#12292e;--mut:#5b6b6e;--line:#d9e0dc;--acc:#e8a200;--ok:#17855a;--bad:#d03b3b;--hero:#12292e;--herotx:#f4f6f3;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1b1e;--card:#15292d;--ink:#e9f0ec;--mut:#9fb2b4;--line:#264247;--hero:#091316}}
+:root[data-theme="dark"]{--bg:#0d1b1e;--card:#15292d;--ink:#e9f0ec;--mut:#9fb2b4;--line:#264247;--hero:#091316}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:60px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+h1,h2,h3{font-family:Georgia,"Iowan Old Style",serif;line-height:1.2;margin:0 0 .5em}
+h2{font-size:1.7rem;margin-top:0}h3{font-size:1.1rem}
+nav{position:sticky;top:0;z-index:5;background:var(--hero);display:flex;gap:4px;overflow-x:auto;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px))}
+nav a{color:#cfe0dc;text-decoration:none;font-size:.85rem;padding:4px 10px;border-radius:99px;white-space:nowrap}nav a:hover,nav a:focus-visible{background:var(--acc);color:#12292e;outline:none}
+header{background:var(--hero);color:var(--herotx);padding:64px 20px 56px}
+.w{max-width:980px;margin:0 auto}
+header h1{font-size:clamp(2.6rem,9vw,5rem);margin:0}header h1 span{color:var(--acc)}
+header p{max-width:60ch;font-size:1.15rem;color:#cfe0dc}
+section{padding:44px 20px;border-bottom:1px solid var(--line)}
+.g{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.c{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.c p{margin:.3em 0;color:var(--mut)}
+.tag{display:inline-block;font-size:.75rem;padding:2px 8px;border-radius:99px;background:var(--acc);color:#12292e;font-weight:600}
+.tag.sim{background:#fbe3c0}.tag.ok{background:#bfe8d4}.tag.no{background:#f4c9c9}
+button{font:inherit;border:0;border-radius:8px;padding:9px 14px;background:var(--ink);color:var(--bg);cursor:pointer}
+button.alt{background:transparent;color:var(--ink);border:1px solid var(--ink)}button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--acc)}
+button:disabled{opacity:.4;cursor:not-allowed}
+input{font:inherit;padding:9px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:.92rem}td,th{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.sc{overflow-x:auto}
+.big{font-family:Georgia,serif;font-size:1.9rem}
+.bar{height:12px;border-radius:6px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:var(--ok);transition:width .4s}
+.alert{border-left:5px solid var(--bad);background:var(--card);padding:12px 14px;border-radius:8px;margin:10px 0}
+details{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:8px 0}summary{cursor:pointer;font-weight:600}
+svg text{fill:var(--mut);font-size:11px}
+.k{display:flex;gap:10px;align-items:center;margin:6px 0}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style></head><body>
+<nav id="nav"></nav>
+<header><div class="w">
+<h1>Nabd<span>.</span></h1>
+<p><b>Le pouls de votre électricité.</b> Nabd aide chaque foyer à voir où part son courant, prévient quand quelque chose cloche, et donne à la STEG une vue d’ensemble sans exposer la vie privée de personne.</p>
+<p>Document de travail de l’équipe · KIZUNA 2026 · 24 heures · objectif : le podium parmi 114 équipes.</p>
+<p><span class="tag sim">Toutes les données de ce document sont simulées</span></p>
+<button class="alt" style="color:#fff;border-color:#fff" onclick="toggleTheme()">Changer le thème</button>
+</div></header>
+
+<main>
+<section id="probleme"><div class="w"><h2>Le problème</h2>
+<div class="g">
+<div class="c"><h3>On ne voit pas</h3><p>Une facture arrive une fois par période. Impossible de savoir quel appareil gaspille.</p></div>
+<div class="c"><h3>On ne réagit pas</h3><p>Une clim mal réglée ou un vieux frigo consomme trop pendant des semaines sans alerte.</p></div>
+<div class="c"><h3>Le réseau subit</h3><p>Les pics du soir sont difficiles à anticiper pour le gestionnaire, en Tunisie comme au Japon.</p></div>
+</div>
+<p><span class="tag">Hypothèses à valider</span> Nous n’avançons aucun chiffre officiel. Avant le pitch, cherchez 2 sources fiables (STEG, ANME, agence japonaise de l’énergie) et citez-les.</p></div></section>
+
+<section id="solution"><div class="w"><h2>La solution : une plateforme, pas un compteur</h2>
+<div class="g">
+<div class="c"><h3>Individuel</h3><p>Chaque personne comprend et réduit sa consommation, appareil par appareil.</p></div>
+<div class="c"><h3>Collectif</h3><p>Un immeuble ou un quartier voit son total et ses progrès.</p></div>
+<div class="c"><h3>Institutionnel</h3><p>La STEG reçoit des indicateurs agrégés et anonymes : pics, anomalies, zones à aider.</p></div>
+</div>
+<p><b>Comment présenter la vision sans mentir :</b> « Aujourd’hui : électricité, prototype logiciel avec données simulées. Demain : eau, solaire, stockage. » Une seule phrase, au futur, jamais au présent.</p></div></section>
+
+<section id="adaptateur"><div class="w"><h2>Fonctionnement de l’adaptateur</h2>
+<div class="c"><p><b>Règle de sécurité : nous ne touchons jamais au courant secteur.</b> Aucun fil sous tension, aucun montage artisanal.</p></div>
+<div class="sc"><table><tr><th>Niveau</th><th>Ce que c’est</th><th>Statut</th></tr>
+<tr><td>Prototype 24 h</td><td>Adaptateur virtuel : un générateur de mesures simulées qui envoie des valeurs à l’API.</td><td><span class="tag sim">Simulé</span></td></tr>
+<tr><td>Démo physique sûre</td><td>Une prise intelligente du commerce, déjà certifiée, si l’un de vous en possède une (Wi-Fi avec mesure de puissance). Sinon : un téléphone qui lit un QR code imprimé.</td><td><span class="tag">Si disponible</span></td></tr>
+<tr><td>Produit futur</td><td>Module certifié avec puce de mesure, isolation et protections, fabriqué par un industriel.</td><td><span class="tag no">Hors prototype</span></td></tr></table></div>
+<p><b>Le QR code</b> contient seulement un identifiant (ex. NABD-0001). Il sert à rattacher l’adaptateur à un compte. Il ne mesure rien. La mesure vient du capteur (ou du simulateur, clairement étiqueté).</p></div></section>
+
+<section id="parcours"><div class="w"><h2>Parcours utilisateur</h2>
+<div class="g" id="steps"></div></div></section>
+
+<section id="fonctions"><div class="w"><h2>Fonctionnalités : ce qu’on garde, ce qu’on coupe</h2>
+<div class="sc"><table id="feat"></table></div></div></section>
+
+<section id="archi"><div class="w"><h2>Architecture technique</h2>
+<p>Volontairement simple : un seul serveur, une seule base, zéro service externe.</p>
+<div class="sc"><svg viewBox="0 0 760 150" width="100%" role="img" aria-label="Schéma : simulateur vers API vers base, IA, deux tableaux de bord">
+<g stroke="currentColor" fill="none" stroke-width="1.5" style="color:var(--ink)">
+<rect x="5" y="50" width="120" height="50" rx="8"/><rect x="170" y="50" width="130" height="50" rx="8"/><rect x="345" y="10" width="120" height="40" rx="8"/><rect x="345" y="100" width="120" height="40" rx="8"/><rect x="515" y="10" width="150" height="40" rx="8"/><rect x="515" y="100" width="150" height="40" rx="8"/>
+<path d="M125 75H170M300 75L345 30M300 75L345 120M465 30H515M465 120H515"/></g>
+<g text-anchor="middle"><text x="65" y="72" style="fill:var(--ink)">Simulateur ou capteur</text><text x="65" y="88">POST /mesures</text><text x="235" y="72" style="fill:var(--ink)">API Rust (Axum)</text><text x="235" y="88">règles + alertes</text><text x="405" y="34" style="fill:var(--ink)">SQLite</text><text x="405" y="124" style="fill:var(--ink)">Module IA (Python)</text><text x="590" y="34" style="fill:var(--ink)">Espace utilisateur</text><text x="590" y="124" style="fill:var(--ink)">Espace STEG</text></g></svg></div>
+<p>Alternative si personne ne maîtrise Axum assez vite : FastAPI. Choisir en 15 minutes, pas plus. Pas de Docker, pas de microservices, pas de blockchain.</p>
+<h3>Base de données</h3>
+<div class="sc"><table><tr><th>Table</th><th>Champs principaux</th></tr>
+<tr><td>utilisateurs</td><td>id, nom, nb_personnes, type_logement, region</td></tr>
+<tr><td>adaptateurs</td><td>id (NABD-xxxx), utilisateur_id, appareil_id, statut</td></tr>
+<tr><td>appareils</td><td>id, nom, type, puissance_nominale_w</td></tr>
+<tr><td>mesures</td><td>adaptateur_id, horodatage, watts, source (simulee ou reelle)</td></tr>
+<tr><td>alertes</td><td>id, adaptateur_id, horodatage, type, explication, resolue</td></tr>
+<tr><td>recompenses</td><td>utilisateur_id, periode, kwh_evites, points</td></tr></table></div></div></section>
+
+<section id="ia"><div class="w"><h2>Module IA, expliqué simplement</h2>
+<div class="g">
+<div class="c"><h3>Problème résolu</h3><p>Repérer qu’un appareil consomme plus que d’habitude, avant la facture.</p></div>
+<div class="c"><h3>Données</h3><p>Watts par appareil toutes les minutes (simulées en démo), avec heure et jour.</p></div>
+<div class="c"><h3>Méthode</h3><p>Médiane glissante par appareil et par heure. Alerte si la valeur dépasse la médiane de plus de 35 % pendant 3 mesures de suite. Un pic isolé ne déclenche rien : cela limite les fausses alertes.</p></div>
+<div class="c"><h3>Prévision</h3><p>Moyenne des mêmes heures des 7 derniers jours, puis ajustement de tendance. Simple, rapide, explicable.</p></div>
+<div class="c"><h3>Recommandation</h3><p>Texte basé sur des règles (ex. clim à 26 °C) puis reformulé en phrase claire. Si un LLM n’est pas disponible, les phrases prédéfinies suffisent.</p></div>
+<div class="c"><h3>Honnêteté</h3><p>Pas d’apprentissage profond : trop peu de données en 24 h. Option bonus si le temps le permet : Isolation Forest (scikit-learn) comparé à la règle.</p></div>
+</div></div></section>
+
+<section id="recompenses"><div class="w"><h2>Système de récompenses</h2>
+<div class="g">
+<div class="c"><h3>Équitable</h3><p>On compare chaque foyer à <b>son propre</b> historique et à des foyers de même taille, jamais à une moyenne nationale.</p></div>
+<div class="c"><h3>Jamais de coupure</h3><p>L’électricité essentielle n’est jamais bloquée. Dépasser un objectif ne coûte rien : il n’y a que des gains.</p></div>
+<div class="c"><h3>Transparent</h3><p>Points = kWh évités par rapport à la référence personnelle. La formule est affichée à l’écran.</p></div>
+<div class="c"><h3>Financement</h3><p><span class="tag">Hypothèse à valider</span> Pistes : économies de pointe pour la STEG, parrainage volontaire par des entreprises. Les dons ne conditionnent jamais l’accès.</p></div>
+</div>
+<p><b>Solidarité :</b> retenue pour le pitch et la roadmap. Section enfants et jeux : <b>coupée</b> du MVP (belle idée, aucun poids dans la démo).</p></div></section>
+
+<section id="proto"><div class="w"><h2>Mini-prototype interactif</h2>
+<p><span class="tag sim">Données simulées</span> Rien ici ne vient d’un vrai capteur. Un tick = 1 minute simulée.</p>
+<div class="c"><h3>1. Ajouter un adaptateur</h3>
+<p>Identifiants de démo : NABD-0001 à NABD-0005 (les deux premiers sont déjà associés).</p>
+<input id="aid" placeholder="NABD-0003" aria-label="Identifiant de l’adaptateur"> <button onclick="addA()">Associer</button> <button class="alt" onclick="scan()">Scanner (simulé)</button>
+<p id="amsg" role="status"></p></div>
+<div class="g" style="margin-top:14px">
+<div class="c"><p>Puissance totale</p><div class="big" id="kw">0 W</div></div>
+<div class="c"><p>Énergie consommée</p><div class="big" id="kwh">0,000 kWh</div></div>
+<div class="c"><p>Économies estimées</p><div class="big" id="sav">0,000 kWh</div></div>
+<div class="c"><p>Points gagnés</p><div class="big" id="pts">0</div></div></div>
+<div class="c" style="margin-top:14px"><h3>2. Consommation en direct</h3>
+<div class="sc"><svg id="chart" viewBox="0 0 700 200" width="100%" style="min-width:520px" role="img" aria-label="Courbe de consommation"></svg></div>
+<button onclick="run()" id="bp">Pause</button> <button onclick="spike()">Pic inhabituel</button> <button onclick="inject()">Clim anormale</button> <button class="alt" onclick="resetS()">Réinitialiser</button>
+<div id="al"></div></div>
+<div class="c" style="margin-top:14px"><h3>Appareils</h3><div id="dev"></div>
+<p>Tarif (hypothèse, modifiable) : <input id="tar" type="number" value="0.3" step="0.05" style="width:90px"> TND/kWh</p>
+<p>Objectif du mois : <span id="goalt"></span></p><div class="bar"><i id="goal" style="width:0"></i></div></div>
+<h3 style="margin-top:20px">Espace STEG (agrégé, anonyme)</h3>
+<div class="c"><p>Les régions sont fictives. « Votre foyer » est ajouté au total pour montrer comment une mesure individuelle devient une vue globale. Aucune région n’est affichée sous 10 foyers : <b>protection de la vie privée</b>.</p><div id="steg"></div></div>
+</div></section>
+
+<section id="impact"><div class="w"><h2>Impact et pertinence Tunisie–Japon</h2>
+<div class="g">
+<div class="c"><h3>Environnement</h3><p>Moins de gaspillage, moins de pointe, donc moins d’énergie produite inutilement.</p></div>
+<div class="c"><h3>Social</h3><p>Aucun foyer pénalisé. Zones rurales et ménages fragiles repérés pour être aidés.</p></div>
+<div class="c"><h3>Tunisie</h3><p>Climatisation l’été, sensibilité au prix, besoin d’outils légers pour la STEG.</p></div>
+<div class="c"><h3>Japon</h3><p>Culture de l’efficacité et de la résilience (séismes, coupures). Même logiciel, autres profils d’appareils. <span class="tag">À sourcer</span></p></div>
+</div>
+<p><b>Adoption sans remplacer le réseau :</b> l’adaptateur se branche en 5 secondes, aucun travail sur l’installation. On commence par les foyers volontaires, puis les bâtiments.</p></div></section>
+
+<section id="plan"><div class="w"><h2>Plan sur 24 heures</h2>
+<div class="sc"><table id="plant"></table></div></div></section>
+
+<section id="equipe"><div class="w"><h2>Répartition de l’équipe</h2>
+<div class="g" id="team"></div>
+<p><b>Contrat d’interface :</b> une mesure = { adaptateur_id, horodatage, watts, source }. Figez-le à l’heure 1 dans un fichier unique. Une branche Git par personne, fusion aux points d’intégration (h6, h12, h18).</p></div></section>
+
+<section id="taches"><div class="w"><h2>Tâches prioritaires</h2>
+<p>Les cases sont sauvegardées dans votre navigateur. <span id="prog"></span></p><div class="bar"><i id="pb" style="width:0"></i></div><div id="tasks"></div></div></section>
+
+<section id="demo"><div class="w"><h2>Scénario de démonstration</h2>
+<ol id="demol"></ol>
+<p><b>Secours :</b> mode démo préchargé, enregistré en local, sans Internet. Une vidéo de 60 secondes enregistrée à l’heure 20.</p></div></section>
+
+<section id="pitch"><div class="w"><h2>Pitch de 3 minutes</h2>
+<div class="c" id="p3"></div>
+<h2 style="margin-top:28px">Pitch de 5 minutes</h2>
+<div class="c" id="p5"></div>
+<h3 style="margin-top:20px">Phrases à retenir</h3>
+<p>« Nous ne vendons pas un compteur, nous rendons l’électricité lisible. » · « Ce que vous voyez est simulé, et c’est écrit à l’écran. » · « Personne n’est jamais coupé. »</p></div></section>
+
+<section id="jury"><div class="w"><h2>Questions difficiles du jury</h2><div id="qa"></div></div></section>
+
+<section id="risques"><div class="w"><h2>Risques et solutions de secours</h2>
+<div class="sc"><table id="risk"></table></div></div></section>
+
+<section id="roadmap"><div class="w"><h2>Roadmap</h2>
+<div class="g">
+<div class="c"><h3>Après le hackathon</h3><p>Pilote avec prises certifiées, 10 foyers volontaires.</p></div>
+<div class="c"><h3>6 mois</h3><p>Application mobile, partenariat STEG, prévisions améliorées.</p></div>
+<div class="c"><h3>Vision</h3><p>Eau, solaire, stockage, bâtiments intelligents, solidarité énergétique.</p></div>
+</div></div></section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+function toggleTheme(){const r=document.documentElement;const d=getComputedStyle(r).getPropertyValue('--bg').trim()==='#0d1b1e';r.dataset.theme=d?'light':'dark'}
+const secs=[["probleme","Problème"],["solution","Solution"],["adaptateur","Adaptateur"],["parcours","Parcours"],["fonctions","Fonctions"],["archi","Architecture"],["ia","IA"],["recompenses","Récompenses"],["proto","Prototype"],["impact","Impact"],["plan","24 h"],["equipe","Équipe"],["taches","Tâches"],["demo","Démo"],["pitch","Pitch"],["jury","Jury"],["risques","Risques"],["roadmap","Roadmap"]];
+$("nav").innerHTML=secs.map(s=>`<a href="#${s[0]}">${s[1]}</a>`).join("");
+const h=(a,r)=>a.map(r).join("");
+$("steps").innerHTML=h(["Ouvrir l’app et créer un profil","Scanner ou saisir NABD-xxxx","L’adaptateur apparaît","Les mesures arrivent","La courbe se met à jour","Une anomalie est détectée","L’IA explique le problème","Une recommandation est proposée","L’utilisateur agit","Les économies s’affichent"],(t,i)=>`<div class="c"><b>${i+1}.</b> ${t}</div>`);
+const F=[["Identifiant QR, association compte et appareil","MVP"],["Mesure en W et calcul des kWh","MVP (simulé)"],["Courbe en direct et historique","MVP"],["Détection d’anomalies (règle médiane)","MVP"],["Explication et recommandation","MVP"],["Points d’économie équitables","MVP"],["Espace STEG agrégé et anonyme","MVP"],["Prévision de consommation","Bonus si le temps le permet"],["Comparaison avec foyers similaires","Bonus"],["Crédits financés par des entreprises","Pitch et roadmap"],["Jeux pour enfants","Coupé"],["Application Android native","Coupé (web responsive)"],["Eau et solaire","Vision future"]];
+$("feat").innerHTML="<tr><th>Fonction</th><th>Décision</th></tr>"+h(F,f=>`<tr><td>${f[0]}</td><td><span class="tag ${f[1].startsWith("MVP")?"ok":f[1].startsWith("Coupé")?"no":""}">${f[1]}</span></td></tr>`);
+const P=[["0–2 h","Cadrage","Figer le contrat de données, choisir la pile","Tous","Contrat écrit, dépôt Git prêt"],["2–8 h","Fondations","API, base, simulateur, squelette des écrans","Dev A, Dev B, UI","POST /mesures stocke des données"],["8–12 h","Intelligence","Détection, alertes, explications","IA","Anomalie déclenchée de bout en bout"],["12–14 h","Intégration 1","Tout relier, tester le parcours complet","Tous","Parcours de 10 étapes qui passe"],["14–18 h","Finitions","Espace STEG, points, mode démo hors ligne","Dev B, UI","Démo sans Internet fonctionne"],["18–21 h","Gel et tests","Plus aucune nouvelle fonction. Correction de bugs","Tous","3 répétitions sans erreur"],["21–24 h","Pitch","Slides, répétitions, vidéo de secours","Tous","Pitch de 3 min chronométré"]];
+$("plant").innerHTML="<tr><th>Heures</th><th>Phase</th><th>Tâches</th><th>Qui</th><th>Validation</th></tr>"+h(P,p=>"<tr>"+h(p,x=>`<td>${x}</td>`)+"</tr>");
+const T=[["Étudiante IA","Détection d’anomalies, prévisions, textes de recommandation, jeu de données simulées. Livrable : module IA appelable par l’API."],["Dev Rust 1","API, base SQLite, règles d’alerte, calcul des kWh. Livrable : API documentée."],["Dev Rust 2 (Linux)","Simulateur de mesures, déploiement local, mode démo hors ligne, option prise certifiée. Livrable : démo qui tourne sans Internet."],["Membre 4 (à confirmer)","Interface web, espace utilisateur et STEG, slides, pitch. Si le profil est plutôt design ou oral, il pilote l’interface et le pitch."]];
+$("team").innerHTML=h(T,t=>`<div class="c"><h3>${t[0]}</h3><p>${t[1]}</p></div>`);
+const K=["Contrat de données figé (h1)","Dépôt Git, une branche par personne","API : enregistrer adaptateur et mesure","Simulateur avec 5 appareils et scénarios","Écran de courbe en direct","Détection d’anomalie testée sur 3 cas","Texte d’explication et recommandation","Points d’économie et objectif","Espace STEG agrégé","Mode démo hors ligne vérifié","Gel des fonctions (h18)","Vidéo de secours enregistrée","Pitch chronométré 3 fois","Sources des chiffres cités"];
+let sv={};try{sv=JSON.parse(localStorage.getItem("nabd")||"{}")}catch(e){}
+function upd(){const n=K.filter((_,i)=>sv[i]).length;$("prog").textContent=n+" sur "+K.length;$("pb").style.width=100*n/K.length+"%"}
+$("tasks").innerHTML=h(K,(t,i)=>`<label class="k"><input type="checkbox" id="t${i}"> ${t}</label>`);
+K.forEach((_,i)=>{const e=$("t"+i);e.checked=!!sv[i];e.onchange=()=>{sv[i]=e.checked;try{localStorage.setItem("nabd",JSON.stringify(sv))}catch(x){}upd()}});upd();
+$("demol").innerHTML=h(["Ouvrir l’app, créer le profil « Foyer démo ».","Saisir NABD-0003 : il apparaît dans la liste.","Lancer la simulation : la courbe bouge.","Cliquer « Clim anormale ».","Lire l’alerte et l’explication de l’IA.","Appliquer la recommandation.","Montrer la baisse, les kWh évités et les points.","Ouvrir l’espace STEG : vue agrégée, anonyme."],t=>`<li>${t}</li>`);
+$("p3").innerHTML=`<p><b>(0:00, personne 1)</b> Chez vous, l’électricité est invisible. Vous la payez, mais vous ne savez pas qui la consomme. La STEG, elle, voit les pics trop tard.</p><p><b>(0:30, personne 2)</b> Nabd relie trois niveaux : le foyer, le bâtiment, l’institution. Chaque appareil a un identifiant par QR code, une mesure, une courbe.</p><p><b>(1:00, personne 3, démo)</b> Je lance la simulation. Les données sont simulées, c’est écrit à l’écran. Voici une clim qui dérive. L’IA le détecte, explique pourquoi, propose un réglage. Je l’applique : la consommation baisse, les points arrivent.</p><p><b>(2:00, personne 4)</b> Côté STEG : une vue agrégée et anonyme. Aucun foyer n’est coupé, jamais. Les récompenses comparent chacun à lui-même.</p><p><b>(2:40, personne 1)</b> Aujourd’hui un prototype honnête. Demain des prises certifiées, puis l’eau et le solaire. Nabd : le pouls de votre électricité.</p>`;
+$("p5").innerHTML=`<p>Même trame que 3 minutes, avec trois ajouts :</p><p><b>+1 min</b> Après le problème, une diapositive « pourquoi maintenant » avec <b>deux chiffres sourcés</b> (Tunisie et Japon).</p><p><b>+1 min</b> Après la démo, une diapositive d’architecture : « Une API, une base, un module IA. Tout tourne en local. » Puis la règle d’IA expliquée en une phrase.</p><p><b>+30 s</b> Avant la conclusion, le modèle de récompenses et la protection de la vie privée (agrégation minimale de 10 foyers).</p>`;
+const Q=[["Pourquoi utiliser l’IA ?","Pour distinguer une vraie dérive d’un usage normal à chaque heure et pour chaque appareil. Une règle fixe donnerait trop de fausses alertes."],["Comment mesurez-vous la consommation ?","Au prototype : simulation, étiquetée. En vrai : un module certifié avec puce de mesure, fabriqué par un industriel, pas par nous."],["Comment éviter les fausses alertes ?","Il faut 3 mesures de suite au-dessus du seuil, calculé sur l’habitude de l’appareil à cette heure."],["Comment fonctionne le QR code ?","Il porte seulement un identifiant. Le serveur l’associe à un compte. Il ne mesure rien."],["Pourquoi la STEG adopterait-elle ?","Pour des indicateurs sur les pics et les zones à aider, sans changer son réseau. À valider avec elle lors d’un pilote."],["Comment protégez-vous les données ?","Collecte minimale, accès par compte, agrégation avant affichage à la STEG, consentement pour le profil socio-économique."],["Comment financez-vous les récompenses ?","Hypothèse : part des économies de pointe et parrainages volontaires. Rien n’est promis avant un pilote."],["Et les utilisateurs vulnérables ?","Jamais de coupure ni de pénalité. Objectifs relatifs à leur propre historique. La STEG peut repérer les besoins pour aider."],["Comment déployer à grande échelle ?","Prise branchable, sans travaux. Foyers volontaires, puis bâtiments, puis quartiers."],["Que se passe-t-il si Internet tombe ?","L’adaptateur garde ses mesures en mémoire et les envoie au retour. La démo fonctionne hors ligne."],["Et si le matériel n’est pas disponible ?","Nous le disons : démo simulée et étiquetée, architecture prête pour de vraies mesures."],["Pourquoi pas un simple compteur connecté ?","Le compteur affiche. Nabd explique, prévient, recommande et agrège."],["Vos économies sont-elles réelles ?","Elles sont estimées par comparaison à la référence de l’appareil. En simulation, ce sont des économies simulées."],["Quelle précision sur la prévision ?","Non mesurée en 24 h. Nous le présentons comme un bonus à valider."],["Un adaptateur peut-il être falsifié ?","Risque réel. Piste : clé secrète par adaptateur et signature des mesures. Hors MVP."],["Pourquoi pas de blockchain pour les crédits ?","Elle ajouterait de la complexité sans résoudre un problème que nous avons."],["Quel est le modèle économique ?","Hypothèses : licence aux fournisseurs d’énergie, service aux bâtiments. À valider."],["Qu’est-ce qui est vraiment fonctionnel ?","Le parcours complet de 10 étapes, sur données simulées."],["Que faites-vous du Japon ?","Même logiciel, profils d’appareils et tarifs adaptés, avec un partenaire local."],["Pourquoi vous plutôt qu’une autre équipe ?","Un prototype honnête qui tourne, une vision en trois niveaux, un souci d’équité et de sécurité."]];
+$("qa").innerHTML=h(Q,q=>`<details><summary>${q[0]}</summary><p>${q[1]}</p></details>`);
+const R=[["Pas de matériel","Simulateur étiqueté, QR imprimé"],["Internet coupé","Mode démo local, vidéo de secours"],["Bug en direct","Données préchargées, bouton « Réinitialiser »"],["Retard","Gel des fonctions à h18, bonus supprimés"],["Pile trop ambitieuse","Basculer sur FastAPI après 15 min d’hésitation"],["Danger électrique","Aucun montage sous tension, jamais"]];
+$("risk").innerHTML="<tr><th>Risque</th><th>Solution</th></tr>"+h(R,r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`);
+
+/* Simulateur */
+const D=[{id:"NABD-0001",n:"Réfrigérateur",b:90,v:.15},{id:"NABD-0002",n:"Ordinateur",b:60,v:.25},{id:"NABD-0003",n:"Télévision",b:110,v:.1},{id:"NABD-0004",n:"Climatisation",b:900,v:.08},{id:"NABD-0005",n:"Chargeur téléphone",b:10,v:.3}];
+let S,run_=true,timer;
+function init(){S={t:0,kwh:0,sav:0,series:[],marks:[],alerts:[],act:[0,1].map(i=>({...D[i],f:1,h:[],hi:0,rec:false,tag:""}))};draw();dev();steg();$("al").innerHTML="";$("amsg").textContent=""}
+const med=a=>{const s=[...a].sort((x,y)=>x-y);return s[Math.floor(s.length/2)]};
+function tick(){S.t++;let tot=0,m=false;S.act.forEach(d=>{let w=d.b*d.f*(1+d.v*(Math.random()*2-1));if(d.n==="Réfrigérateur"&&S.t%12<4)w*=1.6;if(d.spk>0){w*=3.2;d.spk--}d.w=w;tot+=w;
+if(d.h.length>=15){const md=med(d.h);if(w>md*1.35){d.hi++}else d.hi=0;if(d.hi===3&&!d.al){d.al=1;m=true;alertD(d,md,w)}}
+if(d.hi===0&&!d.spk)d.h.push(w);if(d.h.length>30)d.h.shift();
+if(d.rec){const ref=d.b*1.6;if(ref>w){S.sav+=(ref-w)/60000}}});
+S.kwh+=tot/60000;S.series.push(tot);S.marks.push(m);if(S.series.length>70){S.series.shift();S.marks.shift()}draw();dev()}
+function alertD(d,md,w){const p=Math.round((w/md-1)*100);const clim=d.n==="Climatisation";
+const msg=`<div class="alert"><b>Anomalie : ${d.n} (${d.id})</b><br>Consommation ${p} % au-dessus de son habitude (${Math.round(md)} W attendus, ${Math.round(w)} W mesurés, 3 mesures de suite).<br><b>Explication de l’IA :</b> ${clim?"la clim travaille bien plus que d’habitude, probablement une température de consigne trop basse ou un filtre encrassé.":"cet appareil dépasse nettement son profil habituel, vérifiez son état ou son usage."}<br><b>Recommandation :</b> ${clim?"réglez la consigne à 26 °C et nettoyez le filtre.":"débranchez-le ou vérifiez son réglage."} <button onclick="applyR('${d.id}')">Appliquer la recommandation</button></div>`;
+$("al").insertAdjacentHTML("afterbegin",msg)}
+function applyR(id){const d=S.act.find(x=>x.id===id);if(!d)return;d.f=1;d.rec=true;d.al=0;d.hi=0;d.h=[];d.spk=0;$("al").insertAdjacentHTML("afterbegin",`<div class="alert" style="border-color:var(--ok)">Recommandation appliquée sur ${d.n}. Les économies sont estimées par rapport à la consommation anormale (simulée).</div>`)}
+function inject(){const d=S.act.find(x=>x.n==="Climatisation");if(!d){$("amsg").textContent="Associez d’abord NABD-0004 (climatisation).";return}d.f=1.6;d.rec=false}
+function spike(){const d=S.act[0];d.spk=2}
+function draw(){const W=700,H=200,max=Math.max(1200,...S.series)*1.1;const sv=$("chart");let p=S.series.map((v,i)=>`${(i/69*(W-40)+30).toFixed(1)},${(H-20-v/max*(H-40)).toFixed(1)}`);
+let g=[0,.5,1].map(f=>`<line x1="30" x2="${W}" y1="${H-20-f*(H-40)}" y2="${H-20-f*(H-40)}" stroke="var(--line)"/><text x="0" y="${H-16-f*(H-40)}">${Math.round(max*f)}</text>`).join("");
+let pts=S.marks.map((m,i)=>m?`<circle cx="${(i/69*(W-40)+30)}" cy="${H-20-S.series[i]/max*(H-40)}" r="6" fill="var(--bad)"/>`:"").join("");
+sv.innerHTML=g+(p.length?`<polyline fill="none" stroke="var(--acc)" stroke-width="2.5" points="${p.join(" ")}"/>`:"")+pts+`<text x="${W-170}" y="14">Watts (simulés)</text>`;
+const tot=S.series.length?S.series[S.series.length-1]:0;$("kw").textContent=Math.round(tot)+" W";$("kwh").textContent=S.kwh.toFixed(3).replace(".",",")+" kWh";$("sav").textContent=S.sav.toFixed(3).replace(".",",")+" kWh";$("pts").textContent=Math.floor(S.sav*500);
+const tr=parseFloat($("tar").value)||0;$("goalt").textContent="objectif 0,6 kWh sur cette session, coût estimé "+(S.kwh*tr).toFixed(3).replace(".",",")+" TND (hypothèse de tarif)";$("goal").style.width=Math.min(100,S.kwh/.6*100)+"%"}
+function dev(){$("dev").innerHTML=S.act.map(d=>`<div class="k"><b>${d.n}</b> <span class="tag sim">${d.id}</span> ${Math.round(d.w||0)} W ${d.f>1?'<span class="tag no">anormal</span>':d.rec?'<span class="tag ok">corrigé</span>':""}</div>`).join("")}
+function addA(id){id=(id||$("aid").value).trim().toUpperCase();const d=D.find(x=>x.id===id);const m=$("amsg");
+if(!d){m.textContent="Identifiant inconnu. Essayez NABD-0003, NABD-0004 ou NABD-0005.";return}
+if(S.act.some(x=>x.id===id)){m.textContent="Cet adaptateur est déjà associé.";return}
+S.act.push({...d,f:1,h:[],hi:0,rec:false});m.textContent=d.n+" associé à votre compte (démo simulée).";dev()}
+function scan(){const free=D.find(d=>!S.act.some(x=>x.id===d.id));if(!free){$("amsg").textContent="Tous les adaptateurs de démo sont associés.";return}$("aid").value=free.id;addA(free.id)}
+function run(){run_=!run_;$("bp").textContent=run_?"Pause":"Reprendre";clearInterval(timer);if(run_)timer=setInterval(tick,700)}
+function resetS(){init();for(let i=0;i<16;i++)tick()}
+function steg(){const R=[["Tunis (fictif)",1840],["Sfax (fictif)",1260],["Kairouan (fictif)",610],["Tozeur (fictif)",340]];const you=S.series.length?S.series[S.series.length-1]:0;const mx=2200;
+$("steg").innerHTML=R.map(r=>`<div class="k"><span style="width:130px">${r[0]}</span><div class="bar" style="flex:1"><i style="width:${r[1]/mx*100}%;background:var(--acc)"></i></div><span>${r[1]} kW</span></div>`).join("")+`<p>Votre foyer (simulé) pèse ${Math.round(you)} W dans la région « Tunis ». Pic régional simulé : 20 h–22 h. Zone à surveiller : Tozeur (consommation par foyer élevée, <span class="tag sim">hypothèse fictive</span>).</p>`}
+setInterval(steg,5000);
+window.addEventListener("load",()=>{resetS();timer=setInterval(tick,700)});
+</script></body></html>

@@ -34,16 +34,16 @@ Add routes in each app's `urls.py`; project-level prefixes are wired in `config/
 
 ## Module documentation
 
-Most module pages are still scaffolds; M1 currently includes guest chat and feedback features. Each app has a current-state log, specification and screenshot:
+All module pages are scaffolds for the Nabd subject (see `k-mod/00-index.md`). Each app has a current-state log, specification and screenshot:
 
 | App | Current state | Specification | Screenshot |
 |---|---|---|---|
 | Kizuna | [AI.log](kizuna/AI.log) | — | [home](kizuna/screenshots/home.png) |
-| M4 | [AI.log](m4/AI.log) | [requirements](m4/01_user-management.md) | [preview](m4/screenshots/users.png) |
-| M5 | [AI.log](m5/AI.log) | [requirements](m5/02_vehicle-management.md) | [preview](m5/screenshots/vehicles.png) |
-| M3 | [AI.log](m3/AI.log) | [requirements](m3/03_trip-management.md) | [preview](m3/screenshots/trips.png) |
-| M2 | [AI.log](m2/AI.log) | [requirements](m2/04_reservation-management.md) | [preview](m2/screenshots/reservations.png) |
-| M1 | [AI.log](m1/AI.log) | [requirements](m1/05_communication-feedback.md) | [preview](m1/screenshots/coms.png) |
+| M4 | [AI.log](m4/AI.log) | [requirements](m4/04_user-space-rewards.md) | [preview](m4/screenshots/users.png) |
+| M5 | [AI.log](m5/AI.log) | [requirements](m5/05_steg-space.md) | [preview](m5/screenshots/vehicles.png) |
+| M3 | [AI.log](m3/AI.log) | [requirements](m3/03_ai-anomalies.md) | [preview](m3/screenshots/trips.png) |
+| M2 | [AI.log](m2/AI.log) | [requirements](m2/02_api-data.md) | [preview](m2/screenshots/reservations.png) |
+| M1 | [AI.log](m1/AI.log) | [requirements](m1/01_adapter-simulator.md) | — |
 
 ## Common Django commands
 

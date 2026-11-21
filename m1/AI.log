@@ -1,35 +1,22 @@
-# Communication app status
+# Adapter and simulator app status
 
-Updated: 2026-11-15
+Updated: 2026-11-21
 
-## Implemented
+## Current state
 
-- Session-based guest identities; no account or user-module changes are needed.
-- Guest users can create private or group chats and share invite links.
-- A second guest can join from the invite link; only the two participants can view or send messages.
-- HTTP polling, unread counts, visible read receipts and sender-only soft deletion.
-- Voice-only WebRTC calls in private two-person chats, with conversation-scoped HTTP signaling, mute/leave controls and peer-to-peer audio.
-- Reservation conversations still use `open_conversation()`, `close_conversation()` and `mark_trip_completed()`.
-- Twenty-four-hour expiry for trip conversations and the `close_conversations` command.
-- Reviews limited to completed trips and their participants; one review per reviewer/target/trip.
-- Rating summaries hidden until three reviews, staff review moderation and CSV export.
-- Whole-word moderation with basic accent, repetition and character-substitution normalization.
-- Responsive Blackberry/CoRide branding and communication-specific tests.
+- Django app is registered in `config/settings.py`.
+- `/m1/` resolves to the app's `index` view.
+- The view delegates to the shared `kizuna.views.module_page()` placeholder renderer.
+- No adapter registry, simulator, scenario buttons, offline buffer, forms, or feature tests are implemented.
+- Requirements for the Nabd subject are documented in [01_adapter-simulator.md](01_adapter-simulator.md).
 
-## Configuration and integration limits
+## Changes so far
 
-- Guest access is enabled by default. Set Django's `COMMUNICATION_GUEST_MODE = False` or set `CORIDE_COMMUNICATION_GUEST_MODE=false` to require authenticated users. Existing guest sessions stop working while the flag is off.
-- Guest identities are tied to the Django browser session. They are temporary and are not automatically merged with accounts when the user module is integrated.
-- Reservations and trips still have no models or hooks in this branch. Reservation acceptance must call `open_conversation()` and trip completion must call `mark_trip_completed()`.
-- Django Channels and Redis are not configured. Chat uses one-second HTTP polling; delivery is not guaranteed under one second as it would be with WebSockets.
-- Voice calls also use HTTP polling for signaling. `CORIDE_COMMUNICATION_ICE_SERVERS` accepts a JSON list of STUN/TURN servers; the default public STUN server may not connect clients behind restrictive NATs. Configure a TURN service for reliable production calls, and do not commit relay credentials.
-- Configure `COMMUNICATION_BLOCKED_TERMS` in Django settings or `CORIDE_BLOCKED_TERMS` in the environment. No moderation vocabulary is bundled, and an ML classifier is not implemented.
-- Only CSV review export is available; PDF and Excel require additional dependencies.
+- Scaffolded the app with Django's `startapp` command.
+- Added the app URL configuration and project route.
+- Replaced the generated empty view with a module-specific placeholder.
+- Removed the previous guest chat, reviews and voice-call code so the app matches the other placeholders.
 
-## Checks
+## Screenshot
 
-```powershell
-uv run manage.py check
-uv run manage.py test communication
-uv run manage.py makemigrations --check --dry-run
-```
+No screenshot captured yet; open `/m1/` to see the shared placeholder page.

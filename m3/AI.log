@@ -1,14 +1,14 @@
-# Trajets app status
+# AI anomalies app status
 
-Updated: 2026-11-13
+Updated: 2026-11-21
 
 ## Current state
 
 - Django app is registered in `config/settings.py`.
-- `/trips/` resolves to the app's `index` view.
-- The view delegates to the shared `CORIDE.module_page()` placeholder renderer.
-- No trip model, publishing or search workflow, pricing logic, forms, or feature tests are implemented.
-- Requirements are documented in [03_trip-management.md](03_trip-management.md).
+- `/m3/` resolves to the app's `index` view.
+- The view delegates to the shared `kizuna.views.module_page()` placeholder renderer.
+- No sliding-median rule, alert generation, explanation text, forecast, or feature tests are implemented.
+- Requirements for the Nabd subject are documented in [03_ai-anomalies.md](03_ai-anomalies.md).
 
 ## Changes so far
 
@@ -18,4 +18,4 @@ Updated: 2026-11-13
 
 ## Screenshot
 
-![Current trips-module placeholder](screenshots/trips.png)
+![Current m3 placeholder](screenshots/trips.png)

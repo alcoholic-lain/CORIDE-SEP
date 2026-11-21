@@ -23,27 +23,27 @@ Open `http://127.0.0.1:8000/`. Django reloads Python and template changes automa
 | Area | URL | Django app |
 |---|---|---|
 | Kizuna landing page | `/` | `kizuna` |
-| M1 | `/m1/` | `m1` |
-| M2 | `/m2/` | `m2` |
-| M3 | `/m3/` | `m3` |
-| M4 | `/m4/` | `m4` |
-| M5 | `/m5/` | `m5` |
+| M1 — Adapter and simulator | `/m1/` | `m1` |
+| M2 — API and data | `/m2/` | `m2` |
+| M3 — AI anomalies | `/m3/` | `m3` |
+| M4 — User space and rewards | `/m4/` | `m4` |
+| M5 — STEG space | `/m5/` | `m5` |
 | Django admin | `/admin/` | Django admin |
 
 Add routes in each app's `urls.py`; project-level prefixes are wired in `config/urls.py`. Views belong in the app's `views.py`. Shared landing-page templates are in `kizuna/`, and shared static assets are in `assets/`.
 
 ## Module documentation
 
-Most module pages are still scaffolds; M1 currently includes guest chat and feedback features as a reference implementation. Each app has a current-state log, specification and screenshot:
+All module pages are scaffolds for the Nabd subject (see [k-mod/00-index.md](k-mod/00-index.md)). Each app has a current-state log, specification and screenshot:
 
 | App | Current state | Specification | Screenshot |
 |---|---|---|---|
 | Kizuna | [AI.log](kizuna/AI.log) | — | [home](kizuna/screenshots/home.png) |
-| M1 | [AI.log](m1/AI.log) | [requirements](m1/05_communication-feedback.md) | [preview](m1/screenshots/coms.png) |
-| M2 | [AI.log](m2/AI.log) | [requirements](m2/04_reservation-management.md) | [preview](m2/screenshots/reservations.png) |
-| M3 | [AI.log](m3/AI.log) | [requirements](m3/03_trip-management.md) | [preview](m3/screenshots/trips.png) |
-| M4 | [AI.log](m4/AI.log) | [requirements](m4/01_user-management.md) | [preview](m4/screenshots/users.png) |
-| M5 | [AI.log](m5/AI.log) | [requirements](m5/02_vehicle-management.md) | [preview](m5/screenshots/vehicles.png) |
+| M1 | [AI.log](m1/AI.log) | [requirements](m1/01_adapter-simulator.md) | — |
+| M2 | [AI.log](m2/AI.log) | [requirements](m2/02_api-data.md) | [preview](m2/screenshots/reservations.png) |
+| M3 | [AI.log](m3/AI.log) | [requirements](m3/03_ai-anomalies.md) | [preview](m3/screenshots/trips.png) |
+| M4 | [AI.log](m4/AI.log) | [requirements](m4/04_user-space-rewards.md) | [preview](m4/screenshots/users.png) |
+| M5 | [AI.log](m5/AI.log) | [requirements](m5/05_steg-space.md) | [preview](m5/screenshots/vehicles.png) |
 
 ## Common Django commands
 
@@ -92,9 +92,9 @@ The app uses local SQLite unless `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are
 
 For local development, the default remains `db.sqlite3`. To connect locally to Turso, create `.env.local` at the repository root with only the `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` values, omitting Vercel's `VERCEL` flag. The file is ignored by Git and loaded by `manage.py` for non-test commands. Vercel may not allow secret values to be pulled into that file; replace any `[SENSITIVE]` placeholders with a newly rotated token before using it. Run `uv run manage.py migrate` only after verifying which database the environment points to.
 
-### Private chat attachments on Vercel
+### Private file storage on Vercel
 
-Chat attachments use a **Private** Vercel Blob store so only authorized conversation participants can download them through Django. Connect the store to the project's Production, Preview, and Development environments; Vercel supplies `BLOB_STORE_ID` and OIDC credentials. For local imports and development, run `npx vercel@latest env pull .env.local` after connecting Development. Never paste or commit the token values. Local development without Blob credentials continues to use the ignored `media/` directory.
+Uploaded files use a **Private** Vercel Blob store so they are only served through Django. Connect the store to the project's Production, Preview, and Development environments; Vercel supplies `BLOB_STORE_ID` and OIDC credentials. For local imports and development, run `npx vercel@latest env pull .env.local` after connecting Development. Never paste or commit the token values. Local development without Blob credentials continues to use the ignored `media/` directory.
 
 ### Test on a phone over the same LAN
 

@@ -1,14 +1,14 @@
-# Reservations app status
+# API and data app status
 
-Updated: 2026-11-13
+Updated: 2026-11-21
 
 ## Current state
 
 - Django app is registered in `config/settings.py`.
-- `/reservations/` resolves to the app's `index` view.
-- The view delegates to the shared `CORIDE.module_page()` placeholder renderer.
-- No reservation model, seat management, booking flow, QR ticket, forms, or feature tests are implemented.
-- Requirements are documented in [04_reservation-management.md](04_reservation-management.md).
+- `/m2/` resolves to the app's `index` view.
+- The view delegates to the shared `kizuna.views.module_page()` placeholder renderer.
+- No Nabd tables, `/mesures` intake, pairing, alert or aggregate routes, or feature tests are implemented.
+- Requirements for the Nabd subject are documented in [02_api-data.md](02_api-data.md).
 
 ## Changes so far
 
@@ -18,4 +18,4 @@ Updated: 2026-11-13
 
 ## Screenshot
 
-![Current reservations-module placeholder](screenshots/reservations.png)
+![Current m2 placeholder](screenshots/reservations.png)

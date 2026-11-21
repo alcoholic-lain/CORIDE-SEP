@@ -43,11 +43,11 @@ internal class GitHubReleaseUpdater {
                 val assets = release.getJSONArray("assets")
                 (0 until assets.length())
                     .map { assets.getJSONObject(it) }
-                    .any { it.optString("name") == APK_ASSET_NAME }
+                    .any { it.optString("name").endsWith(APK_ASSET_SUFFIX) }
             } catch (error: JSONException) {
                 throw IOException("GitHub returned invalid release asset data", error)
             }
-            if (!hasApk) throw IOException("GitHub release does not contain $APK_ASSET_NAME")
+            if (!hasApk) throw IOException("GitHub release does not contain an $APK_ASSET_SUFFIX file")
 
             val releaseUrl = release.optString("html_url")
             if (!isTrustedReleasePage(releaseUrl, tagName)) {
@@ -81,14 +81,14 @@ internal class GitHubReleaseUpdater {
     }
 
     private companion object {
-        const val APK_ASSET_NAME = "app-debug.apk"
+        const val APK_ASSET_SUFFIX = ".apk"
         const val CONNECTION_TIMEOUT_MS = 15_000
         const val GITHUB_API_VERSION = "2022-11-28"
         const val GITHUB_HOST = "github.com"
         const val RELEASE_API_URL =
             "https://api.github.com/repos/alcoholic-lain/KIZUNA/releases/latest"
         const val RELEASE_PAGE_PATH = "/alcoholic-lain/KIZUNA/releases/tag/"
-        const val USER_AGENT = "Kizuna-Android"
+        const val USER_AGENT = "Mieruka-Android"
         val VERSION_TAG = Regex("^v(\\d+)\\.(\\d+)\\.(\\d+)$")
     }
 }

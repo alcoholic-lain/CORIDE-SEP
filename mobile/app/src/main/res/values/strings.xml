@@ -1,6 +1,6 @@
 <resources>
-    <string name="app_name">Kizuna</string>
-    <string name="open_navigation">Open Kizuna navigation</string>
+    <string name="app_name">Mieruka</string>
+    <string name="open_navigation">Open Mieruka navigation</string>
     <string name="navigation_pages">Pages</string>
     <string name="navigation_home">Home</string>
     <string name="navigation_users">Users</string>
@@ -8,17 +8,17 @@
     <string name="navigation_trips">Trips</string>
     <string name="navigation_reservations">Reservations</string>
     <string name="navigation_communication">Communication</string>
-    <string name="searching_for_server">Looking for Kizuna on this network…</string>
-    <string name="connecting_to_server">Connecting to Kizuna…</string>
-    <string name="loading_online_server">No local server found. Loading Kizuna online…</string>
-    <string name="server_offline">Kizuna is offline.\nWe could not reach a local or hosted server.\nCheck your connection and try again.</string>
+    <string name="searching_for_server">Looking for Mieruka on this network…</string>
+    <string name="connecting_to_server">Connecting to Mieruka…</string>
+    <string name="loading_online_server">No local server found. Loading Mieruka online…</string>
+    <string name="server_offline">Mieruka is offline.\nWe could not reach a local or hosted server.\nCheck your connection and try again.</string>
     <string name="retry_discovery">Try again</string>
     <string name="app_version">v%1$s</string>
     <string name="update_available">v%1$s · v%2$s available</string>
     <string name="view_update">View update</string>
-    <string name="update_prompt_title">New Kizuna release</string>
+    <string name="update_prompt_title">New Mieruka release</string>
     <string name="update_prompt_message">Version %1$s is available. Open its GitHub release page?</string>
     <string name="open_github_release">Open GitHub</string>
     <string name="not_now">Not now</string>
-    <string name="release_page_unavailable">No browser is available to open the Kizuna release.</string>
+    <string name="release_page_unavailable">No browser is available to open the Mieruka release.</string>
 </resources>

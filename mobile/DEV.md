@@ -108,7 +108,7 @@ HTTP is unencrypted and enabled only in debug builds. Use it only on a trusted n
 
 ### Android CI/CD
 
-- Pushes and pull requests targeting `master`, `m1`, or `mobile`, plus manual **Android debug APK** workflow runs, build the Android project and upload the `kizuna-android-debug` APK artifact.
+- Pushes and pull requests targeting `master`, `m1`, or `mobile`, plus manual **Mieruka Android APK** workflow runs, build the Android project and upload the `mieruka-android-apk` artifact (`mieruka-<version>.apk`).
 - Pushes to `mobile` build an APK and, with the persistent signing secret configured, publish a stable GitHub Release. The first automatic release starts at `v0.1.1`; each later release increments the patch version from the latest `vMAJOR.MINOR.PATCH` tag. Version tags also publish releases.
 - The APK's Android `versionName` matches the release version, and `versionCode` is the GitHub Actions run number plus 1000.
 - In the foreground, the app checks GitHub's latest stable release every two minutes. When it finds a newer version, it asks once for that version whether to open the GitHub release page. **Open GitHub** opens the page in the user's browser; **Not now** dismisses the prompt. The **View update** button remains available. The app does not download or install APKs and does not request package-install permission. Android or Play Protect may still show its own security checks.

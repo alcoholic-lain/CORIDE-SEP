@@ -1,4 +1,4 @@
-name: Android debug APK
+name: Mieruka Android APK
 
 on:
   push:
@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       server_url:
-        description: "Optional server origin; omit to discover Kizuna on the local network"
+        description: "Optional server origin; omit to discover the server on the local network"
         required: false
         type: string
 
@@ -95,9 +95,9 @@ jobs:
             exit 0
           fi
 
-          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/kizuna-debug.keystore"
-          chmod 600 "$RUNNER_TEMP/kizuna-debug.keystore"
-          echo "MOBILE_DEBUG_KEYSTORE=$RUNNER_TEMP/kizuna-debug.keystore" >> "$GITHUB_ENV"
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/mieruka-debug.keystore"
+          chmod 600 "$RUNNER_TEMP/mieruka-debug.keystore"
+          echo "MOBILE_DEBUG_KEYSTORE=$RUNNER_TEMP/mieruka-debug.keystore" >> "$GITHUB_ENV"
           echo "configured=true" >> "$GITHUB_OUTPUT"
 
       - name: Build debug APK
@@ -109,11 +109,14 @@ jobs:
             "-PmobileVersionCode=${{ steps.version.outputs.version_code }}" \
             "-PmobileVersionName=${{ steps.version.outputs.version_name }}"
 
-      - name: Upload debug APK
+      - name: Name APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk "app/build/outputs/apk/debug/mieruka-${{ steps.version.outputs.version_name }}.apk"
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: kizuna-android-debug
-          path: mobile/app/build/outputs/apk/debug/app-debug.apk
+          name: mieruka-android-apk
+          path: mobile/app/build/outputs/apk/debug/mieruka-*.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -130,7 +133,7 @@ jobs:
       - name: Download debug APK
         uses: actions/download-artifact@v4
         with:
-          name: kizuna-android-debug
+          name: mieruka-android-apk
           path: release
 
       - name: Publish stable release
@@ -138,11 +141,11 @@ jobs:
         with:
           tag_name: ${{ needs.build.outputs.tag_name }}
           target_commitish: ${{ github.sha }}
-          name: "Kizuna Android ${{ needs.build.outputs.version_name }}"
+          name: "Mieruka Android ${{ needs.build.outputs.version_name }}"
           body: |
-            Automated Android APK release.
+            Mieruka Android APK by Zero-Ichi.
             Version code: ${{ needs.build.outputs.version_code }}
             APK is signed with the repository's persistent update key and intended for sideloading/testing, not Play Store distribution.
           prerelease: false
-          files: release/app-debug.apk
+          files: release/mieruka-*.apk
           fail_on_unmatched_files: true

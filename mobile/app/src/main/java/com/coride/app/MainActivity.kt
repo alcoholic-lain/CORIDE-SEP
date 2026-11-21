@@ -163,7 +163,7 @@ class MainActivity : Activity() {
             setTextColor(getColor(R.color.app_heading))
         }
         val offlineLogo = ImageView(this).apply {
-            setImageResource(R.drawable.kitty)
+            setImageResource(R.drawable.mieruka_icon)
             contentDescription = getString(R.string.app_name)
             scaleType = ImageView.ScaleType.FIT_CENTER
         }

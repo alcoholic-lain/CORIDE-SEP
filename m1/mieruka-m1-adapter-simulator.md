@@ -60,4 +60,6 @@ One measurement, frozen at hour 1 in one shared file:
 
 ## Scaffold preview
 
-The app currently renders the shared placeholder page at `/m1/`, not completed module features. No screenshot has been captured yet.
+The screenshot shows the shared placeholder page, not completed module features.
+
+![M1 placeholder](screenshots/placeholder.png)

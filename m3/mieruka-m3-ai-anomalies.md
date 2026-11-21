@@ -58,4 +58,4 @@ Output:
 
 The screenshot shows the shared placeholder page, not completed module features.
 
-![Current module placeholder](screenshots/trips.png)
+![M3 placeholder](screenshots/placeholder.png)

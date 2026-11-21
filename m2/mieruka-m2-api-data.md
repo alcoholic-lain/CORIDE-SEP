@@ -68,4 +68,4 @@ Source: [k-mod/mieruka-02-api.md](../k-mod/mieruka-02-api.md), [k-mod/mieruka-03
 
 The screenshot shows the shared placeholder page, not completed module features.
 
-![Current module placeholder](screenshots/reservations.png)
+![M2 placeholder](screenshots/placeholder.png)

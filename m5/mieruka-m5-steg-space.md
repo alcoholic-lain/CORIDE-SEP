@@ -47,4 +47,4 @@ Source: [k-mod/mieruka-07-steg-space.md](../k-mod/mieruka-07-steg-space.md).
 
 The screenshot shows the shared placeholder page, not completed module features.
 
-![Current module placeholder](screenshots/vehicles.png)
+![M5 placeholder](screenshots/placeholder.png)

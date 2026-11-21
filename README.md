@@ -26,11 +26,11 @@ All modules are scaffolds that render the shared placeholder page. See each app'
 | App | Log | Spec | Preview |
 |---|---|---|---|
 | kizuna (core) | [AI.log](kizuna/AI.log) | — | [preview](kizuna/screenshots/home.png) |
-| M1 | [AI.log](m1/AI.log) | [spec](m1/mieruka-m1-adapter-simulator.md) | — |
-| M2 | [AI.log](m2/AI.log) | [spec](m2/mieruka-m2-api-data.md) | [preview](m2/screenshots/reservations.png) |
-| M3 | [AI.log](m3/AI.log) | [spec](m3/mieruka-m3-ai-anomalies.md) | [preview](m3/screenshots/trips.png) |
-| M4 | [AI.log](m4/AI.log) | [spec](m4/mieruka-m4-user-space-rewards.md) | [preview](m4/screenshots/users.png) |
-| M5 | [AI.log](m5/AI.log) | [spec](m5/mieruka-m5-steg-space.md) | [preview](m5/screenshots/vehicles.png) |
+| M1 | [AI.log](m1/AI.log) | [spec](m1/mieruka-m1-adapter-simulator.md) | [preview](m1/screenshots/placeholder.png) |
+| M2 | [AI.log](m2/AI.log) | [spec](m2/mieruka-m2-api-data.md) | [preview](m2/screenshots/placeholder.png) |
+| M3 | [AI.log](m3/AI.log) | [spec](m3/mieruka-m3-ai-anomalies.md) | [preview](m3/screenshots/placeholder.png) |
+| M4 | [AI.log](m4/AI.log) | [spec](m4/mieruka-m4-user-space-rewards.md) | [preview](m4/screenshots/placeholder.png) |
+| M5 | [AI.log](m5/AI.log) | [spec](m5/mieruka-m5-steg-space.md) | [preview](m5/screenshots/placeholder.png) |
 
 ## Development
 

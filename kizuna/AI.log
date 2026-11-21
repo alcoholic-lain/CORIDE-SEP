@@ -1,22 +1,26 @@
-# CORIDE app status
+# Kizuna core: status
 
-Updated: 2026-11-13
+Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
 
 ## Current state
 
-- Django app is registered in `config/settings.py`.
-- `/` renders the CoRide landing placeholder.
-- `views.py` provides a shared `module_page()` renderer used by all module placeholders.
-- `templates/coride/module.html` contains the shared responsive placeholder layout.
-- The shared kitty image is served from `assets/kitty.png` and is also used as the page favicon.
-- No business models, authentication flow, navigation, or production feature pages are implemented.
+- Django app `kizuna` is registered in `config/settings.py` and serves the landing page at `/`.
+- `templates/kizuna/home.html` shows the KIZUNA 2026 hackathon logo, a header/footer and links to M1–M5.
+- `views.module_page()` renders `templates/kizuna/module.html`, the shared placeholder used by every module; its logo links back home.
+- `assets/kitty.png` is the site favicon. Mieruka and Zero-Ichi brand assets are in `assets/mieruka/`.
+- The `kizunaserver` management command runs Django and advertises it over mDNS for the Android app (see [DEV.md](../DEV.md)).
+- No business models, authentication or Mieruka feature pages are implemented.
+
+## Documentation
+
+- Subject and module breakdown: [k-mod/mieruka-00-index.md](../k-mod/mieruka-00-index.md)
 
 ## Changes so far
 
-- Scaffolded the app with Django's `startapp` command.
-- Added the home route and shared placeholder renderer.
-- Added screenshots of the currently rendered home page and module placeholders.
+- Scaffolded the app and added the home route and shared placeholder renderer.
+- Rebranded from CoRide to the Kizuna hackathon template, with header/footer module navigation.
+- Refreshed the screenshots of the home page and module placeholders.
 
 ## Screenshot
 
-![Current CoRide landing placeholder](screenshots/home.png)
+![Kizuna home page](screenshots/home.png)

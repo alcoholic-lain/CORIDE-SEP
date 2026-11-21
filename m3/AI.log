@@ -1,21 +1,24 @@
-# AI anomalies app status
+# M3 — AI anomalies: status
 
-Updated: 2026-11-21
+Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
 
 ## Current state
 
-- Django app is registered in `config/settings.py`.
-- `/m3/` resolves to the app's `index` view.
-- The view delegates to the shared `kizuna.views.module_page()` placeholder renderer.
-- No sliding-median rule, alert generation, explanation text, forecast, or feature tests are implemented.
-- Requirements for the Mieruka subject are documented in [mieruka-m3-ai-anomalies.md](mieruka-m3-ai-anomalies.md).
+- Django app `m3` is registered in `config/settings.py` and routed at `/m3/`.
+- `views.index` renders the shared placeholder through `kizuna.views.module_page()`.
+- No sliding-median rule, alert generation, explanation text, forecast or feature tests yet.
+
+## Documentation
+
+- Spec: [mieruka-m3-ai-anomalies.md](mieruka-m3-ai-anomalies.md)
+- Source: [mieruka-04-ai.md](../k-mod/mieruka-04-ai.md)
 
 ## Changes so far
 
 - Scaffolded the app with Django's `startapp` command.
 - Added the app URL configuration and project route.
-- Replaced the generated empty view with a module-specific placeholder.
+- Replaced the generated empty view with the shared placeholder.
 
 ## Screenshot
 
-![Current m3 placeholder](screenshots/trips.png)
+![M3 placeholder](screenshots/placeholder.png)

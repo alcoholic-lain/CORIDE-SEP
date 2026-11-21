@@ -1,21 +1,24 @@
-# API and data app status
+# M2 — API and data: status
 
-Updated: 2026-11-21
+Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
 
 ## Current state
 
-- Django app is registered in `config/settings.py`.
-- `/m2/` resolves to the app's `index` view.
-- The view delegates to the shared `kizuna.views.module_page()` placeholder renderer.
-- No Mieruka tables, `/mesures` intake, pairing, alert or aggregate routes, or feature tests are implemented.
-- Requirements for the Mieruka subject are documented in [mieruka-m2-api-data.md](mieruka-m2-api-data.md).
+- Django app `m2` is registered in `config/settings.py` and routed at `/m2/`.
+- `views.index` renders the shared placeholder through `kizuna.views.module_page()`.
+- No tables, `POST /mesures` intake, pairing, alert, rewards or STEG routes, or feature tests yet.
+
+## Documentation
+
+- Spec: [mieruka-m2-api-data.md](mieruka-m2-api-data.md)
+- Source: [mieruka-02-api.md](../k-mod/mieruka-02-api.md), [mieruka-03-data.md](../k-mod/mieruka-03-data.md)
 
 ## Changes so far
 
 - Scaffolded the app with Django's `startapp` command.
 - Added the app URL configuration and project route.
-- Replaced the generated empty view with a module-specific placeholder.
+- Replaced the generated empty view with the shared placeholder.
 
 ## Screenshot
 
-![Current m2 placeholder](screenshots/reservations.png)
+![M2 placeholder](screenshots/placeholder.png)

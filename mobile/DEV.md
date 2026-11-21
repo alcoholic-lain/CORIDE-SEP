@@ -39,11 +39,11 @@ All module pages are scaffolds for the Mieruka subject (see `k-mod/mieruka-00-in
 | App | Current state | Specification | Screenshot |
 |---|---|---|---|
 | Kizuna | [AI.log](../kizuna/AI.log) | — | [home](../kizuna/screenshots/home.png) |
-| M4 | [AI.log](../m4/AI.log) | [requirements](../m4/mieruka-m4-user-space-rewards.md) | [preview](../m4/screenshots/users.png) |
-| M5 | [AI.log](../m5/AI.log) | [requirements](../m5/mieruka-m5-steg-space.md) | [preview](../m5/screenshots/vehicles.png) |
-| M3 | [AI.log](../m3/AI.log) | [requirements](../m3/mieruka-m3-ai-anomalies.md) | [preview](../m3/screenshots/trips.png) |
-| M2 | [AI.log](../m2/AI.log) | [requirements](../m2/mieruka-m2-api-data.md) | [preview](../m2/screenshots/reservations.png) |
-| M1 | [AI.log](../m1/AI.log) | [requirements](../m1/mieruka-m1-adapter-simulator.md) | — |
+| M4 | [AI.log](../m4/AI.log) | [requirements](../m4/mieruka-m4-user-space-rewards.md) | [preview](../m4/screenshots/placeholder.png) |
+| M5 | [AI.log](../m5/AI.log) | [requirements](../m5/mieruka-m5-steg-space.md) | [preview](../m5/screenshots/placeholder.png) |
+| M3 | [AI.log](../m3/AI.log) | [requirements](../m3/mieruka-m3-ai-anomalies.md) | [preview](../m3/screenshots/placeholder.png) |
+| M2 | [AI.log](../m2/AI.log) | [requirements](../m2/mieruka-m2-api-data.md) | [preview](../m2/screenshots/placeholder.png) |
+| M1 | [AI.log](../m1/AI.log) | [requirements](../m1/mieruka-m1-adapter-simulator.md) | [preview](../m1/screenshots/placeholder.png) |
 
 ## Common Django commands
 

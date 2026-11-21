@@ -1,22 +1,25 @@
-# Adapter and simulator app status
+# M1 — Adapter and simulator: status
 
-Updated: 2026-11-21
+Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
 
 ## Current state
 
-- Django app is registered in `config/settings.py`.
-- `/m1/` resolves to the app's `index` view.
-- The view delegates to the shared `kizuna.views.module_page()` placeholder renderer.
-- No adapter registry, simulator, scenario buttons, offline buffer, forms, or feature tests are implemented.
-- Requirements for the Mieruka subject are documented in [mieruka-m1-adapter-simulator.md](mieruka-m1-adapter-simulator.md).
+- Django app `m1` is registered in `config/settings.py` and routed at `/m1/`.
+- `views.index` renders the shared placeholder through `kizuna.views.module_page()`.
+- No adapter registry, simulator, scenario buttons, offline buffer, forms or feature tests yet.
+
+## Documentation
+
+- Spec: [mieruka-m1-adapter-simulator.md](mieruka-m1-adapter-simulator.md)
+- Source: [mieruka-01-adapter.md](../k-mod/mieruka-01-adapter.md), [mieruka-08-simulator-demo.md](../k-mod/mieruka-08-simulator-demo.md)
 
 ## Changes so far
 
 - Scaffolded the app with Django's `startapp` command.
 - Added the app URL configuration and project route.
-- Replaced the generated empty view with a module-specific placeholder.
-- Removed the previous guest chat, reviews and voice-call code so the app matches the other placeholders.
+- Replaced the generated empty view with the shared placeholder.
+- Removed the earlier guest chat, reviews and voice-call code (2026-11-21) so M1 matches the other placeholders.
 
 ## Screenshot
 
-No screenshot captured yet; open `/m1/` to see the shared placeholder page.
+![M1 placeholder](screenshots/placeholder.png)

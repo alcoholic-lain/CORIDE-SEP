@@ -1,21 +1,24 @@
-# STEG space app status
+# M5 — STEG space: status
 
-Updated: 2026-11-21
+Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
 
 ## Current state
 
-- Django app is registered in `config/settings.py`.
-- `/m5/` resolves to the app's `index` view.
-- The view delegates to the shared `kizuna.views.module_page()` placeholder renderer.
-- No regional aggregates, peak window, 10-household minimum, or feature tests are implemented.
-- Requirements for the Mieruka subject are documented in [mieruka-m5-steg-space.md](mieruka-m5-steg-space.md).
+- Django app `m5` is registered in `config/settings.py` and routed at `/m5/`.
+- `views.index` renders the shared placeholder through `kizuna.views.module_page()`.
+- No regional aggregates, peak window, 10-household minimum or feature tests yet.
+
+## Documentation
+
+- Spec: [mieruka-m5-steg-space.md](mieruka-m5-steg-space.md)
+- Source: [mieruka-07-steg-space.md](../k-mod/mieruka-07-steg-space.md)
 
 ## Changes so far
 
 - Scaffolded the app with Django's `startapp` command.
 - Added the app URL configuration and project route.
-- Replaced the generated empty view with a module-specific placeholder.
+- Replaced the generated empty view with the shared placeholder.
 
 ## Screenshot
 
-![Current m5 placeholder](screenshots/vehicles.png)
+![M5 placeholder](screenshots/placeholder.png)

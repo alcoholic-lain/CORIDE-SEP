@@ -42,7 +42,7 @@ Buttons use `INPUT_PULLUP`, so no external pull-up resistor is needed.
 ## Bench test
 
 1. Wire the LEDs and buttons first, without the LCD. Power the board over USB.
-2. Upload `nabd_demo/nabd_demo.ino`. The green LED should be solid.
+2. Copy `k-mod/mieruka_demo.ino` into a folder named `mieruka_demo`, open it in the Arduino IDE and upload it. The green LED should be solid.
 3. Open the serial monitor at 9600 baud. Expect one JSON line per second with watts around 800 to 1000.
 4. Press **SPIKE**. Within about 3 seconds the red LED should start blinking and the serial watts should jump to about 1400 to 1600.
 5. Press **FIX**. The red LED stops and the green LED returns.

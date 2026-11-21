@@ -7,6 +7,8 @@ Mieruka helps each household see where its electricity goes, warns about waste b
 
 ## Module map
 
+These nine topics map onto the five Django apps: M1 = 01 + 08, M2 = 02 + 03, M3 = 04, M4 = 05 + 06, M5 = 07. Section 09 covers the whole team.
+
 | # | Module | What it does | Source in the workspace |
 |---|---|---|---|
 | 01 | [adapter](mieruka-01-adapter.md) | Adapter identity (NABD-xxxx) and measurement intake (`POST /mesures`), simulated or real | Adaptateur, Architecture |

@@ -1,21 +1,24 @@
-# User space and rewards app status
+# M4 — User space and rewards: status
 
-Updated: 2026-11-21
+Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
 
 ## Current state
 
-- Django app is registered in `config/settings.py`.
-- `/m4/` resolves to the app's `index` view.
-- The view delegates to the shared `kizuna.views.module_page()` placeholder renderer.
-- No household screens, live curve, alert screen, rewards formula, or feature tests are implemented.
-- Requirements for the Mieruka subject are documented in [mieruka-m4-user-space-rewards.md](mieruka-m4-user-space-rewards.md).
+- Django app `m4` is registered in `config/settings.py` and routed at `/m4/`.
+- `views.index` renders the shared placeholder through `kizuna.views.module_page()`.
+- No household screens, live curve, alert screen, rewards formula or feature tests yet.
+
+## Documentation
+
+- Spec: [mieruka-m4-user-space-rewards.md](mieruka-m4-user-space-rewards.md)
+- Source: [mieruka-05-rewards.md](../k-mod/mieruka-05-rewards.md), [mieruka-06-user-space.md](../k-mod/mieruka-06-user-space.md)
 
 ## Changes so far
 
 - Scaffolded the app with Django's `startapp` command.
 - Added the app URL configuration and project route.
-- Replaced the generated empty view with a module-specific placeholder.
+- Replaced the generated empty view with the shared placeholder.
 
 ## Screenshot
 
-![Current m4 placeholder](screenshots/users.png)
+![M4 placeholder](screenshots/placeholder.png)

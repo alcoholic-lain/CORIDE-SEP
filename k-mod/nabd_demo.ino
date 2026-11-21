@@ -1,5 +1,5 @@
 /*
-  Nabd demo, small scale: simulated air conditioner on an Arduino.
+  Mieruka demo, small scale: simulated air conditioner on an Arduino.
   Low voltage only. Nothing here touches mains.
 
   Hardware
@@ -17,7 +17,7 @@
     - Alert when the value is more than 35% above the median for 3 samples in a row.
     - SPIKE button toggles "Clim anormale" (load x1.6).
     - FIX button applies the recommendation: load back to normal, alert cleared.
-    - Every reading is also printed as JSON on serial, in the Nabd measurement format.
+    - Every reading is also printed as JSON on serial, in the Mieruka measurement format.
 */
 
 #include <Wire.h>

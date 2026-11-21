@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Mieruka (見える化) app icon">
+  <defs><clipPath id="tile"><rect width="512" height="512" rx="115"/></clipPath></defs>
+  <g clip-path="url(#tile)">
+  <rect width="512" height="512" fill="#CD181F"/>
+  <!-- ring: ink outline, dark track, pale yellow progress (75%) -->
+  <circle cx="256" cy="262" r="150" fill="none" stroke="#1E1A17" stroke-width="58"/>
+  <circle cx="256" cy="262" r="150" fill="none" stroke="#F8E9AE" stroke-width="40"/>
+  <path d="M256.0 112.0 A150 150 0 1 1 106.0 262.0" fill="none" stroke="#1E1A17" stroke-width="58" stroke-linecap="round"/>
+  <path d="M256.0 112.0 A150 150 0 1 1 106.0 262.0" fill="none" stroke="#EBD27E" stroke-width="40" stroke-linecap="round"/>
+  <!-- kanji, cartoon outline -->
+  <path d="M296.34 287.06V344.92Q296.34 354.79 301.35 357.14Q306.06 359.2 321.81 359.2Q350.67 359.2 355.23 351.11Q358.32 345.37 360.09 315.33L360.38 310.33L382.47 318.42Q380.11 360.38 371.87 369.95Q363.33 379.96 320.48 379.96Q295.75 379.96 287.21 376.58Q274.26 371.72 274.26 355.23V287.06H233.47Q230.82 334.18 209.92 354.64Q187.54 375.99 141.02 386L129.53 365.68Q176.06 357.59 194.31 339.77Q209.77 324.75 211.24 287.06H166.05V126H345.95V287.06ZM187.69 144.7V173.41H323.87V144.7ZM187.69 191.81V220.37H323.87V191.81ZM187.69 238.48V268.37H323.87V238.48Z" fill="#FFFFFF" stroke="#1E1A17" stroke-width="16" stroke-linejoin="round" paint-order="stroke" transform="translate(256 262) scale(0.6) translate(-256 -256)"/>
+  <!-- shaheya -->
+  <g transform="rotate(-10 256 80) translate(256 80) scale(1.35) translate(-165 -58)" stroke="#1E1A17" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M110,104 C112,80 118,62 124,58 L206,58 C212,62 218,80 220,104 Z" fill="#D4483D" stroke-width="10"/>
+    <ellipse cx="165" cy="58" rx="41" ry="9" fill="#A93A32" stroke-width="10"/>
+    <path d="M200,62 Q216,80 210,102" fill="none" stroke="#FBF3D6" stroke-width="8"/>
+    <circle cx="210" cy="104" r="8" fill="#FBF3D6" stroke-width="5"/>
+  </g>
+  </g>
+</svg>

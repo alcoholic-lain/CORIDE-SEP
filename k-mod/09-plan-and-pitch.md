@@ -30,7 +30,7 @@ Git: one branch per person; merge at h6, h12 and h18.
 ## Pitch (3 minutes, workspace script)
 
 - 0:00 Problem: electricity is invisible, the bill arrives late, STEG sees peaks too late.
-- 0:30 Nabd connects the home, the building and the institution.
+- 0:30 Mieruka connects the home, the building and the institution.
 - 1:00 Live demo, labelled simulated. An air conditioner drifts; the AI explains and recommends; the user applies it; consumption drops.
 - 2:00 STEG view, aggregated. No household is ever cut off. Rewards compare each home to itself.
 - 2:40 Honest prototype today; certified plugs, then water and solar tomorrow.

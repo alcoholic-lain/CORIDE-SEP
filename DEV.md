@@ -34,7 +34,7 @@ Add routes in each app's `urls.py`; project-level prefixes are wired in `config/
 
 ## Module documentation
 
-All module pages are scaffolds for the Nabd subject (see [k-mod/00-index.md](k-mod/00-index.md)). Each app has a current-state log, specification and screenshot:
+All module pages are scaffolds for the Mieruka subject (see [k-mod/00-index.md](k-mod/00-index.md)). Each app has a current-state log, specification and screenshot:
 
 | App | Current state | Specification | Screenshot |
 |---|---|---|---|

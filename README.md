@@ -1,6 +1,13 @@
 # Kizuna
 
-Kizuna is a Django hackathon template with five placeholder modules (M1–M5) and a shared core app. The KIZUNA 2026 subject is **Nabd**: it helps each household see where its electricity goes, warns about waste before the bill, and gives STEG an anonymous overview. The prototype runs on simulated data, labelled as simulated on screen. The full module breakdown is in [k-mod/00-index.md](k-mod/00-index.md).
+Kizuna is a Django hackathon template with five placeholder modules (M1–M5) and a shared core app. Team **Zero-Ichi**'s KIZUNA 2026 app is **Mieruka**: it helps each household see where its electricity goes, warns about waste before the bill, and gives STEG an anonymous overview. The prototype runs on simulated data, labelled as simulated on screen. The full module breakdown is in [k-mod/00-index.md](k-mod/00-index.md).
+
+## Team and branding
+
+- **App:** Mieruka (見える化, "visibility"). The workspace subject calls the product Nabd; the app uses Mieruka. Adapter IDs keep the `NABD-xxxx` format from the frozen data contract.
+- **Team:** Zero-Ichi.
+- **App icon:** [assets/mieruka/mieruka-app-icon-v8-rounded.svg](assets/mieruka/mieruka-app-icon-v8-rounded.svg) — v8 flat cartoon, `#CD181F` red background, pale yellow ring, red hat. A full-bleed 1024 px PNG (`mieruka-app-icon-v8-fullbleed-1024.png`) goes next to it for store listings.
+- **Team logo:** [assets/mieruka/zero-itchi-fun-logo.svg](assets/mieruka/zero-itchi-fun-logo.svg) (static) and [assets/mieruka/zero-itchi-fun-logo-animated.svg](assets/mieruka/zero-itchi-fun-logo-animated.svg) (animated) — fox and berries.
 
 ## Modules
 

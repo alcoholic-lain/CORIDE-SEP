@@ -7,8 +7,8 @@ Updated: 2026-11-21
 - Django app is registered in `config/settings.py`.
 - `/m2/` resolves to the app's `index` view.
 - The view delegates to the shared `kizuna.views.module_page()` placeholder renderer.
-- No Nabd tables, `/mesures` intake, pairing, alert or aggregate routes, or feature tests are implemented.
-- Requirements for the Nabd subject are documented in [02_api-data.md](02_api-data.md).
+- No Mieruka tables, `/mesures` intake, pairing, alert or aggregate routes, or feature tests are implemented.
+- Requirements for the Mieruka subject are documented in [02_api-data.md](02_api-data.md).
 
 ## Changes so far
 

@@ -1,7 +1,9 @@
-# Nabd: modules (aligned with the team workspace)
+# Mieruka: modules (aligned with the team workspace)
+
+App: **Mieruka** ("visibility" in Japanese) · Team: **Zero-Ichi**. The workspace names the product Nabd; this project uses Mieruka. Brand assets are in `assets/mieruka/`.
 
 Source: `SUBJECT/Nabd__Espace_de_travail_KIZUNA_2026.html` (team workspace, 24 hours, KIZUNA 2026).
-Nabd helps each household see where its electricity goes, warns about waste before the bill, and gives STEG an anonymous overview. The prototype runs on simulated data, labelled as simulated on screen.
+Mieruka helps each household see where its electricity goes, warns about waste before the bill, and gives STEG an anonymous overview. The prototype runs on simulated data, labelled as simulated on screen.
 
 ## Module map
 

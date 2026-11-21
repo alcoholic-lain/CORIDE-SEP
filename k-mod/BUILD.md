@@ -1,10 +1,10 @@
-# Nabd demo: Arduino LED + LCD (small scale)
+# Mieruka demo: Arduino LED + LCD (small scale)
 
 Low-voltage bench demo only. It uses 5 V from USB and no mains voltage. Nothing here connects to 230/240 V.
 
 ## What it shows
 
-A simulated air conditioner (`NABD-0004`) draws about 900 W. Press **SPIKE** to simulate an anomaly (about 1.6x load). The Nabd rule raises an alert after 3 consecutive readings more than 35% above the sliding median. The red LED blinks and the LCD shows `ANOMALIE +xx%`. Press **FIX** to apply the recommendation: the load returns to normal and the green LED comes back on.
+A simulated air conditioner (`NABD-0004`) draws about 900 W. Press **SPIKE** to simulate an anomaly (about 1.6x load). The Mieruka rule raises an alert after 3 consecutive readings more than 35% above the sliding median. The red LED blinks and the LCD shows `ANOMALIE +xx%`. Press **FIX** to apply the recommendation: the load returns to normal and the green LED comes back on.
 
 Each second is one simulated minute. Measurements are printed on serial in the shared contract format:
 `{"adaptateur_id":"NABD-0004","horodatage":...,"watts":...,"source":"simulee"}`
@@ -52,7 +52,7 @@ Buttons use `INPUT_PULLUP`, so no external pull-up resistor is needed.
 
 1. "This is one household appliance, an air conditioner, at normal use." (green, about 900 W)
 2. Press SPIKE. "Its consumption jumps, which could be a fault or wasted energy." Wait for the red alert.
-3. "Nabd compares each reading to this device's own recent median. Three readings above 35% trigger the alert."
+3. "Mieruka compares each reading to this device's own recent median. Three readings above 35% trigger the alert."
 4. Press FIX. "The household applies the recommendation. Points are awarded for the kWh avoided against this device's own history."
 5. Point to the serial output to show the measurement format that the real adapter will send.
 

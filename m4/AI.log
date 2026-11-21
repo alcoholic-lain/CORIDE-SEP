@@ -8,7 +8,7 @@ Updated: 2026-11-21
 - `/m4/` resolves to the app's `index` view.
 - The view delegates to the shared `kizuna.views.module_page()` placeholder renderer.
 - No household screens, live curve, alert screen, rewards formula, or feature tests are implemented.
-- Requirements for the Nabd subject are documented in [04_user-space-rewards.md](04_user-space-rewards.md).
+- Requirements for the Mieruka subject are documented in [04_user-space-rewards.md](04_user-space-rewards.md).
 
 ## Changes so far
 

@@ -8,7 +8,7 @@ Updated: 2026-11-21
 - `/m5/` resolves to the app's `index` view.
 - The view delegates to the shared `kizuna.views.module_page()` placeholder renderer.
 - No regional aggregates, peak window, 10-household minimum, or feature tests are implemented.
-- Requirements for the Mieruka subject are documented in [05_steg-space.md](05_steg-space.md).
+- Requirements for the Mieruka subject are documented in [mieruka-m5-steg-space.md](mieruka-m5-steg-space.md).
 
 ## Changes so far
 

@@ -4,7 +4,7 @@
 **Dependencies:** M2 (data contract, `POST /mesures`) · **Used by:** M2 (stores readings), M3 (anomaly input), M4 (live curve)
 **Plan:** Sprint 1 — adapter IDs and simulator posting readings · Sprint 2 — demo scenarios and offline buffer · Sprint 3 — preloaded demo, reset button, backup video
 
-Source: [k-mod/01-adapter.md](../k-mod/01-adapter.md), [k-mod/08-simulator-demo.md](../k-mod/08-simulator-demo.md).
+Source: [k-mod/mieruka-01-adapter.md](../k-mod/mieruka-01-adapter.md), [k-mod/mieruka-08-simulator-demo.md](../k-mod/mieruka-08-simulator-demo.md).
 
 ## Features
 

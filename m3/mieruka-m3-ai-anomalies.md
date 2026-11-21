@@ -4,7 +4,7 @@
 **Dependencies:** M2 (measurements) · **Used by:** M2 (alerts), M4 (alert screen, reference for rewards)
 **Plan:** Sprint 1 — sliding-median anomaly rule · Sprint 2 — explanation and recommendation text · Sprint 3 — same-hour forecast, optional Isolation Forest comparison
 
-Source: [k-mod/04-ai.md](../k-mod/04-ai.md).
+Source: [k-mod/mieruka-04-ai.md](../k-mod/mieruka-04-ai.md).
 
 ## Features
 

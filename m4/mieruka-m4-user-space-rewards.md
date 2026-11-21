@@ -4,7 +4,7 @@
 **Dependencies:** M2 (routes), M3 (alerts and reference) · **Used by:** M5 (household joins the regional total)
 **Plan:** Sprint 1 — add adapter and live curve screens · Sprint 2 — alert screen and apply recommendation · Sprint 3 — rewards, monthly goal and tariff
 
-Source: [k-mod/06-user-space.md](../k-mod/06-user-space.md), [k-mod/05-rewards.md](../k-mod/05-rewards.md).
+Source: [k-mod/mieruka-06-user-space.md](../k-mod/mieruka-06-user-space.md), [k-mod/mieruka-05-rewards.md](../k-mod/mieruka-05-rewards.md).
 
 ## Features
 

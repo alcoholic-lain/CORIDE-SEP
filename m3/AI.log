@@ -8,7 +8,7 @@ Updated: 2026-11-21
 - `/m3/` resolves to the app's `index` view.
 - The view delegates to the shared `kizuna.views.module_page()` placeholder renderer.
 - No sliding-median rule, alert generation, explanation text, forecast, or feature tests are implemented.
-- Requirements for the Mieruka subject are documented in [03_ai-anomalies.md](03_ai-anomalies.md).
+- Requirements for the Mieruka subject are documented in [mieruka-m3-ai-anomalies.md](mieruka-m3-ai-anomalies.md).
 
 ## Changes so far
 

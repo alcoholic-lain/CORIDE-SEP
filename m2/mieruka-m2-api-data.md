@@ -4,7 +4,7 @@
 **Dependencies:** M3 (anomaly rule), M4 (rewards formula) · **Used by:** M1 (posts readings), M4 (household screens), M5 (STEG aggregates)
 **Plan:** Sprint 1 — schema, data contract and `POST /mesures` · Sprint 2 — pairing, alerts and rewards routes · Sprint 3 — STEG aggregate route and error messages
 
-Source: [k-mod/02-api.md](../k-mod/02-api.md), [k-mod/03-data.md](../k-mod/03-data.md). Stack is an open decision (Rust/Axum, FastAPI fallback, or this Django app); see [k-mod/00-index.md](../k-mod/00-index.md).
+Source: [k-mod/mieruka-02-api.md](../k-mod/mieruka-02-api.md), [k-mod/mieruka-03-data.md](../k-mod/mieruka-03-data.md). Stack is an open decision (Rust/Axum, FastAPI fallback, or this Django app); see [k-mod/mieruka-00-index.md](../k-mod/mieruka-00-index.md).
 
 ## Features
 

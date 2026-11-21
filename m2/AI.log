@@ -8,7 +8,7 @@ Updated: 2026-11-21
 - `/m2/` resolves to the app's `index` view.
 - The view delegates to the shared `kizuna.views.module_page()` placeholder renderer.
 - No Mieruka tables, `/mesures` intake, pairing, alert or aggregate routes, or feature tests are implemented.
-- Requirements for the Mieruka subject are documented in [02_api-data.md](02_api-data.md).
+- Requirements for the Mieruka subject are documented in [mieruka-m2-api-data.md](mieruka-m2-api-data.md).
 
 ## Changes so far
 

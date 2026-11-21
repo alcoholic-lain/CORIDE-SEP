@@ -9,15 +9,15 @@ Mieruka helps each household see where its electricity goes, warns about waste b
 
 | # | Module | What it does | Source in the workspace |
 |---|---|---|---|
-| 01 | [adapter](01-adapter.md) | Adapter identity (NABD-xxxx) and measurement intake (`POST /mesures`), simulated or real | Adaptateur, Architecture |
-| 02 | [api](02-api.md) | Users, pairing, readings, alerts, rewards, HTTP routes | Architecture, Base de données |
-| 03 | [data](03-data.md) | SQLite schema and the frozen data contract | Base de données, Contrat de données |
-| 04 | [ai](04-ai.md) | Median anomaly rule, same-hour forecast, recommendation text | IA |
-| 05 | [rewards](05-rewards.md) | Fair points for kWh avoided against the household's own reference | Système de récompenses |
-| 06 | [user-space](06-user-space.md) | The household's screens: add adapter, live curve, alert, savings | Parcours, Prototype |
-| 07 | [steg-space](07-steg-space.md) | Aggregated, anonymous view for STEG, with a minimum of 10 households | Espace STEG |
-| 08 | [simulator-demo](08-simulator-demo.md) | Virtual adapters, the demo scenario, offline mode, backup video | Prototype, Démo, Secours |
-| 09 | [plan-and-pitch](09-plan-and-pitch.md) | 24-hour plan, team split, checkpoints, pitch, Q&A, risks | 24 h, Équipe, Pitch, Jury, Risques |
+| 01 | [adapter](mieruka-01-adapter.md) | Adapter identity (NABD-xxxx) and measurement intake (`POST /mesures`), simulated or real | Adaptateur, Architecture |
+| 02 | [api](mieruka-02-api.md) | Users, pairing, readings, alerts, rewards, HTTP routes | Architecture, Base de données |
+| 03 | [data](mieruka-03-data.md) | SQLite schema and the frozen data contract | Base de données, Contrat de données |
+| 04 | [ai](mieruka-04-ai.md) | Median anomaly rule, same-hour forecast, recommendation text | IA |
+| 05 | [rewards](mieruka-05-rewards.md) | Fair points for kWh avoided against the household's own reference | Système de récompenses |
+| 06 | [user-space](mieruka-06-user-space.md) | The household's screens: add adapter, live curve, alert, savings | Parcours, Prototype |
+| 07 | [steg-space](mieruka-07-steg-space.md) | Aggregated, anonymous view for STEG, with a minimum of 10 households | Espace STEG |
+| 08 | [simulator-demo](mieruka-08-simulator-demo.md) | Virtual adapters, the demo scenario, offline mode, backup video | Prototype, Démo, Secours |
+| 09 | [plan-and-pitch](mieruka-09-plan-and-pitch.md) | 24-hour plan, team split, checkpoints, pitch, Q&A, risks | 24 h, Équipe, Pitch, Jury, Risques |
 
 ## Scope rules from the workspace
 

@@ -8,7 +8,7 @@ Updated: 2026-11-21
 - `/m1/` resolves to the app's `index` view.
 - The view delegates to the shared `kizuna.views.module_page()` placeholder renderer.
 - No adapter registry, simulator, scenario buttons, offline buffer, forms, or feature tests are implemented.
-- Requirements for the Mieruka subject are documented in [01_adapter-simulator.md](01_adapter-simulator.md).
+- Requirements for the Mieruka subject are documented in [mieruka-m1-adapter-simulator.md](mieruka-m1-adapter-simulator.md).
 
 ## Changes so far
 

@@ -4,7 +4,7 @@
 **Dependencies:** M2 (`/steg/agregat`, data) · **Used by:** Pitch (final demo step)
 **Plan:** Sprint 1 — consumption per fictional region · Sprint 2 — evening peak window and areas to watch · Sprint 3 — labels, polish and pitch screenshots
 
-Source: [k-mod/07-steg-space.md](../k-mod/07-steg-space.md).
+Source: [k-mod/mieruka-07-steg-space.md](../k-mod/mieruka-07-steg-space.md).
 
 ## Features
 
